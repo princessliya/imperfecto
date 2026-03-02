@@ -1,0 +1,939 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Imperfecto A3 — Vibe Game</title>
+  <style>
+    :root{
+      --bg:#0b0f1a;
+      --card:#111833;
+      --card2:#0f1530;
+      --text:#eaf0ff;
+      --muted:#a7b2d6;
+      --line:#22305c;
+      --good:#46d38a;
+      --bad:#ff5a7a;
+      --accent:#8a7dff;
+      --accent2:#ff7bd2;
+      --shadow: 0 20px 60px rgba(0,0,0,.55);
+      --radius: 18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background: radial-gradient(1200px 600px at 20% 10%, rgba(138,125,255,.18), transparent 55%),
+                  radial-gradient(900px 500px at 80% 10%, rgba(255,123,210,.14), transparent 55%),
+                  radial-gradient(900px 700px at 50% 90%, rgba(70,211,138,.10), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .wrap{width:min(980px, 100%);}
+    .topbar{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:14px;
+    }
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+    .brand h1{
+      margin:0;
+      font-size:18px;
+      letter-spacing:.2px;
+    }
+    .brand .sub{
+      color:var(--muted);
+      font-size:13px;
+    }
+    .pillrow{
+      display:flex; gap:8px; flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .pill{
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      padding:8px 10px;
+      border-radius:999px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap:14px;
+    }
+    @media (max-width: 860px){
+      .grid{grid-template-columns: 1fr; }
+      .pillrow{justify-content:flex-start;}
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .inner{ padding:18px; }
+    .card h2{
+      margin:0 0 10px;
+      font-size:14px;
+      color:var(--muted);
+      letter-spacing:.2px;
+      font-weight:600;
+    }
+    .questionBox{
+      background: linear-gradient(180deg, rgba(17,24,51,.9), rgba(15,21,48,.9));
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 16px;
+      padding:16px;
+    }
+    .qType{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .tag{
+      font-size:12px;
+      color:var(--text);
+      background: rgba(138,125,255,.16);
+      border: 1px solid rgba(138,125,255,.35);
+      padding:6px 10px;
+      border-radius: 999px;
+      white-space:nowrap;
+    }
+    .timer{
+      font-family: var(--mono);
+      font-size:12px;
+      color: var(--muted);
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      white-space:nowrap;
+    }
+    .timer.urgent{
+      color: var(--bad);
+      border-color: rgba(255,90,122,.4);
+      animation: pulse .6s ease-in-out infinite alternate;
+    }
+    @keyframes pulse{ from{opacity:.7} to{opacity:1} }
+    .sentence{
+      font-size:22px;
+      line-height:1.3;
+      margin:0 0 14px;
+    }
+    .hint{
+      color:var(--muted);
+      font-size:13px;
+      margin:0 0 14px;
+    }
+    .answers{
+      display:grid;
+      gap:10px;
+      grid-template-columns: 1fr 1fr;
+    }
+    @media (max-width: 520px){
+      .answers{grid-template-columns: 1fr;}
+      .sentence{font-size:20px;}
+    }
+    button.choice{
+      width:100%;
+      text-align:left;
+      border-radius:14px;
+      padding:12px 12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      color:var(--text);
+      cursor:pointer;
+      transition: transform .04s ease, background .2s ease, border-color .2s ease;
+      font-size:14px;
+    }
+    button.choice:hover:not(:disabled){ background: rgba(255,255,255,.07); }
+    button.choice:active:not(:disabled){ transform: scale(.99); }
+    button.choice:disabled{
+      cursor: default;
+      opacity: .65;
+    }
+    button.choice.highlight-correct{
+      border-color: rgba(70,211,138,.6);
+      background: rgba(70,211,138,.18);
+      opacity: 1;
+    }
+    button.choice.highlight-wrong{
+      border-color: rgba(255,90,122,.6);
+      background: rgba(255,90,122,.18);
+      opacity: 1;
+    }
+    .fill{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:10px;
+    }
+    input[type="text"]{
+      flex: 1 1 220px;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      outline:none;
+      font-size:14px;
+      font-family: var(--mono);
+    }
+    .btnRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+    .btn{
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding:10px 12px;
+      cursor:pointer;
+      transition: background .2s ease, border-color .2s ease, opacity .2s ease;
+      font-size:13px;
+    }
+    .btn:hover:not(:disabled){ background: rgba(255,255,255,.09); }
+    .btn:disabled{
+      opacity: .35;
+      cursor: not-allowed;
+    }
+    .btn.primary{
+      background: linear-gradient(90deg, rgba(138,125,255,.55), rgba(255,123,210,.40));
+      border-color: rgba(255,255,255,.20);
+    }
+    .btn.primary:hover:not(:disabled){ filter: brightness(1.05); }
+    .btn.danger{
+      background: rgba(255,90,122,.12);
+      border-color: rgba(255,90,122,.35);
+    }
+    .feedback{
+      margin-top:12px;
+      border-radius:14px;
+      padding:12px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+      font-size:13px;
+      display:none;
+    }
+    .feedback.good{ border-color: rgba(70,211,138,.35); background: rgba(70,211,138,.10); color: #c9ffe4; }
+    .feedback.bad{ border-color: rgba(255,90,122,.35); background: rgba(255,90,122,.10); color: #ffd3dc; }
+    .feedback.almost{ border-color: rgba(255,193,7,.4); background: rgba(255,193,7,.10); color: #fff8e1; }
+    .sideStats{
+      display:grid;
+      gap:14px;
+    }
+    .statGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    .stat{
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      padding:12px;
+      min-height:80px;
+    }
+    .stat .k{ color:var(--muted); font-size:12px; margin-bottom:6px; }
+    .stat .v{ font-size:20px; font-family:var(--mono); }
+    .stat .s{ color:var(--muted); font-size:12px; margin-top:6px; }
+    .controls{
+      display:grid;
+      gap:10px;
+    }
+    .row{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    }
+    label{
+      font-size:12px;
+      color: var(--muted);
+    }
+    select{
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      outline:none;
+      font-size:13px;
+      transition: opacity .2s ease;
+    }
+    select:disabled{
+      opacity: .35;
+      cursor: not-allowed;
+    }
+    .mini{
+      font-size:12px;
+      color: var(--muted);
+      line-height:1.35;
+      margin:0;
+    }
+    .footerNote{
+      margin-top:14px;
+      color: rgba(167,178,214,.85);
+      font-size:12px;
+      text-align:center;
+    }
+    .kbd{ font-family: var(--mono); padding:2px 6px; border-radius:8px; background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); }
+    .hidden{ display:none !important; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Imperfecto A3 — Vibe Game</h1>
+        <div class="sub">Mixed mode (MCQ + Fill) + Timed Chaos. Focus: -aba / -ía + ser/ir/ver.</div>
+      </div>
+      <div class="pillrow">
+        <div class="pill">⌛ Timed mode</div>
+        <div class="pill">🧩 Mixed questions</div>
+        <div class="pill">✨ Instant feedback</div>
+      </div>
+    </div>
+    <div class="grid">
+      <!-- Main -->
+      <div class="card">
+        <div class="inner">
+          <h2>Question</h2>
+          <div class="questionBox">
+            <div class="qType">
+              <div id="qTag" class="tag">—</div>
+              <div id="timer" class="timer">Time: —</div>
+            </div>
+            <p id="sentence" class="sentence">Press Start or Practice.</p>
+            <p id="hint" class="hint"></p>
+            <!-- Multiple Choice -->
+            <div id="mcq" class="answers"></div>
+            <!-- Fill -->
+            <div id="fill" class="fill hidden">
+              <input id="fillInput" type="text" placeholder="Type the imperfect form (e.g., hablaba / vivíamos)"/>
+              <button id="submitFill" class="btn primary">Submit</button>
+            </div>
+            <div class="btnRow">
+              <button id="startBtn" class="btn primary">Start (Timed)</button>
+              <button id="practiceBtn" class="btn primary">Practice</button>
+              <button id="nextBtn" class="btn" disabled>Next</button>
+              <button id="revealBtn" class="btn" disabled>Reveal</button>
+              <button id="resetBtn" class="btn danger">Reset</button>
+            </div>
+            <div id="feedback" class="feedback"></div>
+          </div>
+          <div class="footerNote">
+            Shortcuts: <span class="kbd">1-4</span> (choose) • <span class="kbd">Enter</span> (submit fill) • <span class="kbd">N</span> (next)
+          </div>
+        </div>
+      </div>
+      <!-- Side -->
+      <div class="sideStats">
+        <div class="card">
+          <div class="inner">
+            <h2>Scoreboard</h2>
+            <div class="statGrid">
+              <div class="stat">
+                <div class="k">Score</div>
+                <div id="score" class="v">0</div>
+                <div class="s">+10 correct • -3 wrong</div>
+              </div>
+              <div class="stat">
+                <div class="k">Streak</div>
+                <div id="streak" class="v">0</div>
+                <div class="s">Bonus at 3+</div>
+              </div>
+              <div class="stat">
+                <div class="k">Correct</div>
+                <div id="correct" class="v">0</div>
+                <div class="s">Keep it moving</div>
+              </div>
+              <div class="stat">
+                <div class="k">Wrong</div>
+                <div id="wrong" class="v">0</div>
+                <div class="s">No shame. Learn fast.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="inner">
+            <h2>Game Settings</h2>
+            <div class="controls">
+              <div class="row">
+                <label for="roundSeconds">Round time</label>
+                <select id="roundSeconds">
+                  <option value="30">30s</option>
+                  <option value="45" selected>45s</option>
+                  <option value="60">60s</option>
+                </select>
+                <label for="mode">Mode</label>
+                <select id="mode">
+                  <option value="mixed" selected>Mixed (MCQ + Fill)</option>
+                  <option value="mcq">MCQ only</option>
+                  <option value="fill">Fill only</option>
+                </select>
+              </div>
+              <div class="row">
+                <label for="focus">Focus</label>
+                <select id="focus">
+                  <option value="all" selected>All (regular + ser/ir/ver)</option>
+                  <option value="regular">Regular only</option>
+                  <option value="irregular">Irregular only (ser/ir/ver)</option>
+                </select>
+                <label for="soundToggle">Sound</label>
+                <select id="soundToggle">
+                  <option value="on" selected>On</option>
+                  <option value="off">Off</option>
+                </select>
+              </div>
+              <p class="mini">
+                Tip: In class, share your screen and let classmates shout answers. Or assign teams and rotate who clicks.
+              </p>
+              <p class="mini">
+                Imperfect reminders: habits/descriptions/background in the past. Regular endings: <b>-aba</b> (AR), <b>-ía</b> (ER/IR). Irregular: <b>era</b>, <b>iba</b>, <b>veía</b>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<script>
+/**
+ * Imperfecto A3 — Vibe Game
+ * - Mixed MCQ + Fill
+ * - Timed + Practice (untimed) modes
+ * - Focus: regular (-aba / -ía) + irregular ser/ir/ver
+ * - Accent-sensitive grading
+ * - Sound effects, auto-advance, MCQ highlights, question history
+ */
+const $ = (id)=>document.getElementById(id);
+
+const state = {
+  gameMode: "idle",       // "idle" | "timed" | "practice"
+  running: false,
+  timeLeft: 0,
+  timerHandle: null,
+  autoAdvanceHandle: null,
+  score: 0,
+  streak: 0,
+  correct: 0,
+  wrong: 0,
+  current: null,
+  locked: false,
+};
+
+/* ── Question history to avoid repeats ── */
+const recentCombos = [];
+const HISTORY_SIZE = 8;
+
+/* ── Sound via Web Audio API ── */
+let audioCtx = null;
+function getAudioCtx(){
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function playSound(type){
+  if ($("soundToggle").value === "off") return;
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    if (type === "correct"){
+      osc.frequency.setValueAtTime(523, ctx.currentTime);
+      osc.frequency.setValueAtTime(659, ctx.currentTime + 0.08);
+      osc.frequency.setValueAtTime(784, ctx.currentTime + 0.16);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.35);
+    } else if (type === "almost"){
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      osc.frequency.setValueAtTime(415, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+    } else {
+      osc.frequency.setValueAtTime(330, ctx.currentTime);
+      osc.frequency.setValueAtTime(260, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.18, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+    }
+  } catch(e){}
+}
+
+/* ── Normalize helpers ── */
+function normalizeFull(s){
+  return (s || "").toLowerCase().replace(/\s+/g," ").trim();
+}
+function normalizeStripped(s){
+  return (s || "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/\s+/g," ")
+    .trim();
+}
+
+function randInt(n){ return Math.floor(Math.random()*n); }
+function pick(arr){ return arr[randInt(arr.length)]; }
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+/* ── Dataset ── */
+const REGULAR_ITEMS = [
+  {inf:"hablar", yo:"hablaba", tu:"hablabas", el:"hablaba", nos:"hablábamos", ellos:"hablaban"},
+  {inf:"trabajar", yo:"trabajaba", tu:"trabajabas", el:"trabajaba", nos:"trabajábamos", ellos:"trabajaban"},
+  {inf:"estudiar", yo:"estudiaba", tu:"estudiabas", el:"estudiaba", nos:"estudiábamos", ellos:"estudiaban"},
+  {inf:"caminar", yo:"caminaba", tu:"caminabas", el:"caminaba", nos:"caminábamos", ellos:"caminaban"},
+  {inf:"comprar", yo:"compraba", tu:"comprabas", el:"compraba", nos:"comprábamos", ellos:"compraban"},
+  {inf:"mirar", yo:"miraba", tu:"mirabas", el:"miraba", nos:"mirábamos", ellos:"miraban"},
+  {inf:"jugar", yo:"jugaba", tu:"jugabas", el:"jugaba", nos:"jugábamos", ellos:"jugaban"},
+  {inf:"cocinar", yo:"cocinaba", tu:"cocinabas", el:"cocinaba", nos:"cocinábamos", ellos:"cocinaban"},
+  {inf:"comer", yo:"comía", tu:"comías", el:"comía", nos:"comíamos", ellos:"comían"},
+  {inf:"vivir", yo:"vivía", tu:"vivías", el:"vivía", nos:"vivíamos", ellos:"vivían"},
+  {inf:"escribir", yo:"escribía", tu:"escribías", el:"escribía", nos:"escribíamos", ellos:"escribían"},
+  {inf:"leer", yo:"leía", tu:"leías", el:"leía", nos:"leíamos", ellos:"leían"},
+  {inf:"beber", yo:"bebía", tu:"bebías", el:"bebía", nos:"bebíamos", ellos:"bebían"},
+  {inf:"tener", yo:"tenía", tu:"tenías", el:"tenía", nos:"teníamos", ellos:"tenían"},
+];
+const IRREGULAR_ITEMS = [
+  {inf:"ser", yo:"era", tu:"eras", el:"era", nos:"éramos", ellos:"eran"},
+  {inf:"ir", yo:"iba", tu:"ibas", el:"iba", nos:"íbamos", ellos:"iban"},
+  {inf:"ver", yo:"veía", tu:"veías", el:"veía", nos:"veíamos", ellos:"veían"},
+];
+const SUBJECTS = [
+  {key:"yo", label:"yo"},
+  {key:"tu", label:"tú"},
+  {key:"el", label:"él/ella/usted"},
+  {key:"nos", label:"nosotros/as"},
+  {key:"ellos", label:"ellos/ellas/ustedes"},
+];
+const CONTEXTS = [
+  {type:"Habit", hint:"Habit / repeated action in the past (often: siempre, todos los días, de niño/a)."},
+  {type:"Description", hint:"Description/background (how it was: age, feelings, weather, setting)."},
+  {type:"Background", hint:"Background action (often with: mientras, cuando...)."},
+];
+
+/* ── Sentence templates with optional verb restrictions ── */
+const SENTENCE_TEMPLATES = [
+  {ctx:"Habit", text:"Cuando era niño/a, {S} {V} en el parque todos los días.", extra:"(INF: {INF})"},
+  {ctx:"Habit", text:"Antes, {S} siempre {V} mucho por la noche.", extra:"(INF: {INF})"},
+  {ctx:"Habit", text:"Los fines de semana, {S} {V} con mi familia.", extra:"(INF: {INF})"},
+  {ctx:"Description", text:"De pequeño/a, {S} {V} muy tímido/a.", extra:"(INF: {INF})", verbs:["ser"]},
+  {ctx:"Description", text:"En esa época, {S} {V} en una ciudad pequeña.", extra:"(INF: {INF})"},
+  {ctx:"Description", text:"En aquellos tiempos, {S} {V} mucho.", extra:"(INF: {INF})"},
+  {ctx:"Description", text:"Cuando {S} era joven, {V} a muchos lugares.", extra:"(INF: {INF})", verbs:["ir"]},
+  {ctx:"Background", text:"{S} {V} cuando mi amigo llamó.", extra:"(INF: {INF})"},
+  {ctx:"Background", text:"Mientras {S} {V}, escuchábamos música.", extra:"(INF: {INF})"},
+  {ctx:"Background", text:"{S} {V} en la oficina y hacía frío.", extra:"(INF: {INF})"},
+];
+
+/* ── Build a question ── */
+function makeQuestion(){
+  const mode = $("mode").value;
+  const focus = $("focus").value;
+  let pool = [];
+  if (focus === "regular") pool = REGULAR_ITEMS;
+  else if (focus === "irregular") pool = IRREGULAR_ITEMS;
+  else pool = REGULAR_ITEMS.concat(IRREGULAR_ITEMS);
+
+  // Pick item + subject, avoiding recent combos
+  let item, subj, combo;
+  let attempts = 0;
+  do {
+    item = pick(pool);
+    subj = pick(SUBJECTS);
+    combo = item.inf + "|" + subj.key;
+    attempts++;
+  } while (recentCombos.includes(combo) && attempts < 15);
+  recentCombos.push(combo);
+  if (recentCombos.length > HISTORY_SIZE) recentCombos.shift();
+
+  const ctx = pick(CONTEXTS);
+
+  // Pick a template matching context AND verb compatibility
+  let templates = SENTENCE_TEMPLATES.filter(t =>
+    t.ctx === ctx.type && (!t.verbs || t.verbs.includes(item.inf))
+  );
+  if (templates.length === 0){
+    templates = SENTENCE_TEMPLATES.filter(t => t.ctx === ctx.type && !t.verbs);
+  }
+  const tpl = pick(templates);
+  const answer = item[subj.key];
+  const qMode = (mode === "mixed") ? (Math.random() < 0.55 ? "mcq" : "fill") : mode;
+
+  const blank = "_____";
+  const sentence = tpl.text.replace("{S}", subj.label).replace("{V}", blank);
+  const hint = ctx.hint + " " + tpl.extra.replace("{INF}", item.inf);
+
+  if (qMode === "mcq"){
+    const distractors = new Set();
+    const addDist = (val)=>{ if (val !== answer) distractors.add(val); };
+
+    // (1) same verb, other person
+    addDist(item[pick(SUBJECTS.filter(s=>s.key!==subj.key)).key]);
+    // (2) same person, different verb
+    const otherItem1 = pick(pool.filter(x=>x.inf!==item.inf));
+    addDist(otherItem1[subj.key]);
+    // (3) different verb, different person
+    let pool3 = pool.filter(x=>x.inf!==item.inf && x.inf!==otherItem1.inf);
+    if (pool3.length === 0) pool3 = pool.filter(x=>x.inf!==item.inf);
+    if (pool3.length === 0) pool3 = pool;
+    addDist(pick(pool3)[pick(SUBJECTS.filter(s=>s.key!==subj.key)).key]);
+
+    // Fill to 3 unique distractors
+    let safety = 0;
+    while(distractors.size < 3 && safety < 30){
+      addDist(pick(pool)[pick(SUBJECTS).key]);
+      safety++;
+    }
+    const distArr = Array.from(distractors).slice(0,3);
+    const options = shuffle([answer, ...distArr]);
+    return {
+      kind:"mcq", tag:`MCQ · ${ctx.type}`, sentence, hint,
+      answer, answerDisplay: answer, options,
+      explain: explainImperfect(item.inf, subj.label, answer),
+    };
+  }
+  return {
+    kind:"fill", tag:`FILL · ${ctx.type}`, sentence, hint,
+    answer, answerDisplay: answer, options: null,
+    explain: explainImperfect(item.inf, subj.label, answer),
+  };
+}
+
+function explainImperfect(inf, subjLabel, ans){
+  const isIrregular = (inf === "ser" || inf === "ir" || inf === "ver");
+  const endings = isIrregular
+    ? "Irregular imperfect: ser/ir/ver have unique forms."
+    : (inf.endsWith("ar")
+      ? "AR imperfect uses -aba endings."
+      : "ER/IR imperfect uses -ía endings.");
+  return `Correct form for <b>${subjLabel}</b> + <b>${inf}</b> in imperfect is <b>${ans}</b>. ${endings}`;
+}
+
+/* ── Rendering ── */
+function renderQuestion(q){
+  state.current = q;
+  state.locked = false;
+  $("qTag").textContent = q.tag;
+  $("sentence").textContent = q.sentence;
+  $("hint").textContent = q.hint;
+  hideFeedback();
+  $("mcq").innerHTML = "";
+  $("fill").classList.add("hidden");
+  if (q.kind === "mcq"){
+    q.options.forEach((opt, idx)=>{
+      const btn = document.createElement("button");
+      btn.className = "choice";
+      btn.textContent = `${idx+1}. ${opt}`;
+      btn.dataset.value = opt;
+      btn.addEventListener("click", ()=>handleAnswer(opt));
+      $("mcq").appendChild(btn);
+    });
+  } else {
+    $("fill").classList.remove("hidden");
+    $("fillInput").value = "";
+    $("fillInput").focus();
+  }
+  syncButtons();
+}
+
+function highlightMCQ(userAnswer){
+  const buttons = $("mcq").querySelectorAll("button.choice");
+  const correct = state.current.answer;
+  buttons.forEach(btn=>{
+    btn.disabled = true;
+    const val = btn.dataset.value;
+    if (val === correct) btn.classList.add("highlight-correct");
+    else if (val === userAnswer && val !== correct) btn.classList.add("highlight-wrong");
+  });
+}
+
+function showFeedback(type, msg){
+  const box = $("feedback");
+  box.classList.remove("good","bad","almost");
+  if (type === "good") box.classList.add("good");
+  else if (type === "almost") box.classList.add("almost");
+  else box.classList.add("bad");
+  box.innerHTML = msg;
+  box.style.display = "block";
+}
+function hideFeedback(){
+  const box = $("feedback");
+  box.style.display = "none";
+  box.innerHTML = "";
+  box.classList.remove("good","bad","almost");
+}
+function updateStats(){
+  $("score").textContent = state.score;
+  $("streak").textContent = state.streak;
+  $("correct").textContent = state.correct;
+  $("wrong").textContent = state.wrong;
+}
+
+/* ── Scoring ── */
+function award(result){
+  if (result === "correct"){
+    state.correct += 1;
+    state.streak += 1;
+    let add = 10;
+    if (state.streak >= 3) add += 2;
+    if (state.streak >= 6) add += 2;
+    state.score += add;
+  } else if (result === "almost"){
+    // Accent wrong: no penalty, no reward, streak preserved
+  } else {
+    state.wrong += 1;
+    state.streak = 0;
+    state.score -= 3;
+    if (state.score < 0) state.score = 0;
+  }
+  updateStats();
+}
+
+/* ── Answer handling ── */
+function handleAnswer(raw){
+  if (!state.current || state.locked) return;
+  state.locked = true;
+  clearAutoAdvance();
+
+  if (state.current.kind === "fill"){
+    const userExact  = normalizeFull(raw);
+    const ansExact   = normalizeFull(state.current.answer);
+    const userStrip  = normalizeStripped(raw);
+    const ansStrip   = normalizeStripped(state.current.answer);
+
+    if (userExact === ansExact){
+      award("correct");
+      playSound("correct");
+      showFeedback("good", `Correct! ${state.current.explain}`);
+      scheduleAutoAdvance();
+    } else if (userStrip === ansStrip){
+      award("almost");
+      playSound("almost");
+      showFeedback("almost",
+        `Almost! Check your accents. The correct form is <b>${state.current.answerDisplay}</b>.<br>${state.current.explain}`
+      );
+    } else {
+      award("wrong");
+      playSound("wrong");
+      showFeedback("bad",
+        `Not quite. Correct answer: <b>${state.current.answerDisplay}</b><br>${state.current.explain}`
+      );
+    }
+  } else {
+    // MCQ — direct string comparison (no accent issue)
+    const ok = (raw === state.current.answer);
+    highlightMCQ(raw);
+    if (ok){
+      award("correct");
+      playSound("correct");
+      showFeedback("good", `Correct! ${state.current.explain}`);
+      scheduleAutoAdvance();
+    } else {
+      award("wrong");
+      playSound("wrong");
+      showFeedback("bad",
+        `Not quite. Correct answer: <b>${state.current.answerDisplay}</b><br>${state.current.explain}`
+      );
+    }
+  }
+  syncButtons();
+}
+
+/* ── Auto-advance (timed mode only) ── */
+function scheduleAutoAdvance(){
+  if (state.gameMode !== "timed") return;
+  state.autoAdvanceHandle = setTimeout(()=>{
+    state.autoAdvanceHandle = null;
+    next();
+  }, 1200);
+}
+function clearAutoAdvance(){
+  if (state.autoAdvanceHandle){
+    clearTimeout(state.autoAdvanceHandle);
+    state.autoAdvanceHandle = null;
+  }
+}
+
+function reveal(){
+  if (!state.current || state.locked) return;
+  showFeedback("good", `Answer: <b>${state.current.answerDisplay}</b><br>${state.current.explain}`);
+  state.locked = true;
+  if (state.current.kind === "mcq") highlightMCQ(null);
+  syncButtons();
+}
+
+function next(){
+  clearAutoAdvance();
+  if (state.gameMode === "idle") return;
+  renderQuestion(makeQuestion());
+}
+
+/* ── Timer ── */
+function setTimerText(){
+  const el = $("timer");
+  if (state.gameMode !== "timed"){
+    el.textContent = state.gameMode === "practice" ? "Practice" : "Time: —";
+    el.classList.remove("urgent");
+    return;
+  }
+  el.textContent = `Time: ${state.timeLeft}s`;
+  if (state.timeLeft <= 10) el.classList.add("urgent");
+  else el.classList.remove("urgent");
+}
+
+function startTimed(){
+  resetStats();
+  state.gameMode = "timed";
+  state.running = true;
+  state.timeLeft = parseInt($("roundSeconds").value, 10);
+  setTimerText();
+  syncSettings();
+  next();
+  state.timerHandle = setInterval(()=>{
+    state.timeLeft -= 1;
+    if (state.timeLeft <= 0){
+      state.timeLeft = 0;
+      setTimerText();
+      endTimed();
+      return;
+    }
+    setTimerText();
+  }, 1000);
+}
+
+function endTimed(){
+  if (state.timerHandle) clearInterval(state.timerHandle);
+  state.timerHandle = null;
+  state.running = false;
+  state.gameMode = "idle";
+  state.locked = true;
+  clearAutoAdvance();
+  showFeedback("good",
+    `⏰ Time's up! Final score: <b>${state.score}</b> · Correct: <b>${state.correct}</b> · Wrong: <b>${state.wrong}</b> · Best streak: <b>${state.streak}</b>`
+  );
+  syncSettings();
+  syncButtons();
+}
+
+function startPractice(){
+  resetStats();
+  state.gameMode = "practice";
+  state.running = false;
+  setTimerText();
+  syncSettings();
+  next();
+}
+
+function resetStats(){
+  clearAutoAdvance();
+  if (state.timerHandle) clearInterval(state.timerHandle);
+  state.timerHandle = null;
+  state.running = false;
+  state.score = 0;
+  state.streak = 0;
+  state.correct = 0;
+  state.wrong = 0;
+  state.current = null;
+  state.locked = false;
+  recentCombos.length = 0;
+  updateStats();
+}
+
+function resetAll(){
+  resetStats();
+  state.gameMode = "idle";
+  $("qTag").textContent = "—";
+  $("sentence").textContent = "Press Start or Practice.";
+  $("hint").textContent = "";
+  $("mcq").innerHTML = "";
+  $("fill").classList.add("hidden");
+  hideFeedback();
+  setTimerText();
+  syncSettings();
+  syncButtons();
+}
+
+/* ── UI state sync ── */
+function syncButtons(){
+  const idle = state.gameMode === "idle";
+  $("startBtn").disabled = !idle;
+  $("practiceBtn").disabled = !idle;
+  $("nextBtn").disabled = idle;
+  $("revealBtn").disabled = idle || !state.current || state.locked;
+}
+function syncSettings(){
+  const locked = state.gameMode === "timed";
+  $("roundSeconds").disabled = locked;
+  $("mode").disabled = state.gameMode !== "idle";
+  $("focus").disabled = state.gameMode !== "idle";
+}
+
+/* ── Event listeners ── */
+$("startBtn").addEventListener("click", startTimed);
+$("practiceBtn").addEventListener("click", startPractice);
+$("nextBtn").addEventListener("click", next);
+$("revealBtn").addEventListener("click", reveal);
+$("resetBtn").addEventListener("click", resetAll);
+$("submitFill").addEventListener("click", ()=>{
+  handleAnswer($("fillInput").value);
+});
+$("fillInput").addEventListener("keydown", (e)=>{
+  if (e.key === "Enter"){
+    e.preventDefault();
+    handleAnswer($("fillInput").value);
+  }
+});
+
+// Keyboard shortcuts — skip when typing in an input
+document.addEventListener("keydown", (e)=>{
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+  if (e.key.toLowerCase() === "n"){ e.preventDefault(); next(); }
+  if (["1","2","3","4"].includes(e.key)){
+    const idx = parseInt(e.key,10)-1;
+    const q = state.current;
+    if (q && q.kind === "mcq" && q.options && q.options[idx] !== undefined){
+      handleAnswer(q.options[idx]);
+    }
+  }
+});
+
+/* ── Init ── */
+updateStats();
+setTimerText();
+syncButtons();
+syncSettings();
+</script>
+</body>
+</html>
