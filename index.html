@@ -685,6 +685,40 @@ const SENTENCE_TEMPLATES = [
   {ctx:"Background", text:"{S} {V} cuando de repente escuchamos un ruido.", extra:"(INF: {INF})"},
 ];
 
+/* ── Tricky distractor generators ── */
+
+// Build a WRONG-ENDING fake: swap -aba↔-ía pattern
+function buildFakeForm(inf, subjKey, correctAnswer){
+  const stem = inf.slice(0, -2); // remove -ar/-er/-ir
+  const isAR = inf.endsWith("ar");
+  // Swap ending family: AR verbs get -ía endings, ER/IR verbs get -aba endings
+  const fakeMap = {
+    yo:   isAR ? stem + "ía"       : stem + "aba",
+    tu:   isAR ? stem + "ías"      : stem + "abas",
+    el:   isAR ? stem + "ía"       : stem + "aba",
+    nos:  isAR ? stem + "íamos"    : stem + "ábamos",
+    ellos:isAR ? stem + "ían"      : stem + "aban",
+  };
+  const fake = fakeMap[subjKey];
+  return (fake && fake !== correctAnswer) ? fake : null;
+}
+
+// Build a PRESENT-TENSE trap form
+function buildPresentTrap(inf, subjKey){
+  const stem = inf.slice(0, -2);
+  const isAR = inf.endsWith("ar");
+  const isER = inf.endsWith("er");
+  // Approximate regular present tense forms
+  const presMap = isAR ? {
+    yo: stem + "o", tu: stem + "as", el: stem + "a", nos: stem + "amos", ellos: stem + "an"
+  } : isER ? {
+    yo: stem + "o", tu: stem + "es", el: stem + "e", nos: stem + "emos", ellos: stem + "en"
+  } : {
+    yo: stem + "o", tu: stem + "es", el: stem + "e", nos: stem + "imos", ellos: stem + "en"
+  };
+  return presMap[subjKey] || null;
+}
+
 /* ── Build a question ── */
 function makeQuestion(){
   const mode = $("mode").value;
@@ -725,25 +759,39 @@ function makeQuestion(){
 
   if (qMode === "mcq"){
     const distractors = new Set();
-    const addDist = (val)=>{ if (val !== answer) distractors.add(val); };
+    const addDist = (val)=>{ if (val && val !== answer) distractors.add(val); };
 
-    // (1) same verb, other person
-    addDist(item[pick(SUBJECTS.filter(s=>s.key!==subj.key)).key]);
-    // (2) same person, different verb
-    const otherItem1 = pick(pool.filter(x=>x.inf!==item.inf));
-    addDist(otherItem1[subj.key]);
-    // (3) different verb, different person
-    let pool3 = pool.filter(x=>x.inf!==item.inf && x.inf!==otherItem1.inf);
-    if (pool3.length === 0) pool3 = pool.filter(x=>x.inf!==item.inf);
-    if (pool3.length === 0) pool3 = pool;
-    addDist(pick(pool3)[pick(SUBJECTS.filter(s=>s.key!==subj.key)).key]);
+    // Strategy 1: NEIGHBOR PERSON — same verb, closest person (e.g. hablaba→hablabas)
+    // Pick the most confusing person first (yo↔él share forms, tú is +s)
+    const neighborMap = {yo:"tu", tu:"yo", el:"yo", nos:"ellos", ellos:"nos"};
+    addDist(item[neighborMap[subj.key] || "tu"]);
+    // Also add another person of the same verb
+    addDist(item[pick(SUBJECTS.filter(s=>s.key!==subj.key && s.key!==neighborMap[subj.key])).key]);
 
-    // Fill to 3 unique distractors
+    // Strategy 2: WRONG ENDING TYPE — if -ar verb, offer an -ía style fake; if -er/-ir, offer -aba style fake
+    const fakeEndings = buildFakeForm(item.inf, subj.key, answer);
+    if (fakeEndings) addDist(fakeEndings);
+
+    // Strategy 3: PRESENT TENSE TRAP — offer what looks like present tense
+    const presentTrap = buildPresentTrap(item.inf, subj.key);
+    if (presentTrap) addDist(presentTrap);
+
+    // Strategy 4: IRREGULAR CONFUSION — if regular, offer an irregular form for same person; vice versa
+    const isIrreg = IRREGULAR_ITEMS.some(x=>x.inf===item.inf);
+    const confusionPool = isIrreg ? REGULAR_ITEMS : IRREGULAR_ITEMS;
+    if (confusionPool.length > 0) addDist(pick(confusionPool)[subj.key]);
+
+    // Strategy 5: SAME conjugation group, same person (e.g. comía vs vivía vs escribía)
+    const sameGroupVerbs = pool.filter(x => x.inf !== item.inf && x[subj.key] !== answer);
+    if (sameGroupVerbs.length > 0) addDist(pick(sameGroupVerbs)[subj.key]);
+
+    // Fill remaining slots to ensure 3 unique distractors
     let safety = 0;
     while(distractors.size < 3 && safety < 30){
       addDist(pick(pool)[pick(SUBJECTS).key]);
       safety++;
     }
+    // Pick the 3 trickiest (prioritize what we added first)
     const distArr = Array.from(distractors).slice(0,3);
     const options = shuffle([answer, ...distArr]);
     return {
