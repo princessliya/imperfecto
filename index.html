@@ -444,54 +444,64 @@ const state = {
 
 /* ── Question history to avoid repeats ── */
 const recentCombos = [];
-const HISTORY_SIZE = 8;
+const HISTORY_SIZE = 20;
 
 /* ── Confetti ── */
 function launchConfetti(){
   const canvas = document.createElement("canvas");
-  canvas.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999";
-  document.body.appendChild(canvas);
-  const ctx2 = canvas.getContext("2d");
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  const colors = ["#8a7dff","#ff7bd2","#46d38a","#ff5a7a","#ffd166","#4fc3f7","#fff"];
+  canvas.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:99999";
+  document.documentElement.appendChild(canvas);
+  const c = canvas.getContext("2d");
+  const W = canvas.width = window.innerWidth;
+  const H = canvas.height = window.innerHeight;
+  const colors = ["#8a7dff","#ff7bd2","#46d38a","#ff5a7a","#ffd166","#4fc3f7","#ffffff","#a78bfa","#f472b6"];
   const pieces = [];
-  for (let i = 0; i < 150; i++){
+  // Burst from two points (left-center and right-center) like party poppers
+  const origins = [{x: W * 0.15, y: H * 0.5}, {x: W * 0.85, y: H * 0.5}];
+  for (let i = 0; i < 200; i++){
+    const o = origins[i % 2];
+    const angle = (i % 2 === 0 ? -Math.PI * 0.7 : -Math.PI * 0.3) + (Math.random() - 0.5) * 1.2;
+    const speed = 8 + Math.random() * 12;
     pieces.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height * -1,
-      w: 6 + Math.random() * 6,
-      h: 4 + Math.random() * 4,
+      x: o.x,
+      y: o.y,
+      w: 5 + Math.random() * 7,
+      h: 3 + Math.random() * 5,
       color: colors[Math.floor(Math.random() * colors.length)],
-      vx: (Math.random() - 0.5) * 4,
-      vy: 2 + Math.random() * 4,
+      vx: Math.cos(angle) * speed * (i % 2 === 0 ? 1 : -1) * -1,
+      vy: Math.sin(angle) * speed,
       rot: Math.random() * Math.PI * 2,
-      rv: (Math.random() - 0.5) * 0.15,
+      rv: (Math.random() - 0.5) * 0.2,
+      gravity: 0.12 + Math.random() * 0.06,
+      drag: 0.98,
       opacity: 1,
     });
   }
   let frame = 0;
-  const maxFrames = 180;
+  const maxFrames = 240;
   function draw(){
-    ctx2.clearRect(0, 0, canvas.width, canvas.height);
+    c.clearRect(0, 0, W, H);
     frame++;
-    const fade = frame > maxFrames * 0.6 ? 1 - (frame - maxFrames * 0.6) / (maxFrames * 0.4) : 1;
-    pieces.forEach(p => {
+    const fadeStart = maxFrames * 0.65;
+    const fade = frame > fadeStart ? 1 - (frame - fadeStart) / (maxFrames - fadeStart) : 1;
+    for (const p of pieces){
+      p.vx *= p.drag;
+      p.vy *= p.drag;
+      p.vy += p.gravity;
       p.x += p.vx;
       p.y += p.vy;
-      p.vy += 0.06;
       p.rot += p.rv;
       p.opacity = Math.max(0, fade);
-      ctx2.save();
-      ctx2.translate(p.x, p.y);
-      ctx2.rotate(p.rot);
-      ctx2.globalAlpha = p.opacity;
-      ctx2.fillStyle = p.color;
-      ctx2.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-      ctx2.restore();
-    });
+      c.save();
+      c.translate(p.x, p.y);
+      c.rotate(p.rot);
+      c.globalAlpha = p.opacity;
+      c.fillStyle = p.color;
+      c.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      c.restore();
+    }
     if (frame < maxFrames) requestAnimationFrame(draw);
-    else { canvas.remove(); }
+    else canvas.remove();
   }
   requestAnimationFrame(draw);
 }
@@ -560,8 +570,9 @@ function shuffle(arr){
   return a;
 }
 
-/* ── Dataset ── */
+/* ── Dataset (40 regular + 3 irregular = 43 verbs × 5 subjects = 215 combos) ── */
 const REGULAR_ITEMS = [
+  // ── AR verbs (-aba) ──
   {inf:"hablar", yo:"hablaba", tu:"hablabas", el:"hablaba", nos:"hablábamos", ellos:"hablaban"},
   {inf:"trabajar", yo:"trabajaba", tu:"trabajabas", el:"trabajaba", nos:"trabajábamos", ellos:"trabajaban"},
   {inf:"estudiar", yo:"estudiaba", tu:"estudiabas", el:"estudiaba", nos:"estudiábamos", ellos:"estudiaban"},
@@ -570,12 +581,48 @@ const REGULAR_ITEMS = [
   {inf:"mirar", yo:"miraba", tu:"mirabas", el:"miraba", nos:"mirábamos", ellos:"miraban"},
   {inf:"jugar", yo:"jugaba", tu:"jugabas", el:"jugaba", nos:"jugábamos", ellos:"jugaban"},
   {inf:"cocinar", yo:"cocinaba", tu:"cocinabas", el:"cocinaba", nos:"cocinábamos", ellos:"cocinaban"},
+  {inf:"bailar", yo:"bailaba", tu:"bailabas", el:"bailaba", nos:"bailábamos", ellos:"bailaban"},
+  {inf:"cantar", yo:"cantaba", tu:"cantabas", el:"cantaba", nos:"cantábamos", ellos:"cantaban"},
+  {inf:"nadar", yo:"nadaba", tu:"nadabas", el:"nadaba", nos:"nadábamos", ellos:"nadaban"},
+  {inf:"viajar", yo:"viajaba", tu:"viajabas", el:"viajaba", nos:"viajábamos", ellos:"viajaban"},
+  {inf:"escuchar", yo:"escuchaba", tu:"escuchabas", el:"escuchaba", nos:"escuchábamos", ellos:"escuchaban"},
+  {inf:"descansar", yo:"descansaba", tu:"descansabas", el:"descansaba", nos:"descansábamos", ellos:"descansaban"},
+  {inf:"llegar", yo:"llegaba", tu:"llegabas", el:"llegaba", nos:"llegábamos", ellos:"llegaban"},
+  {inf:"llamar", yo:"llamaba", tu:"llamabas", el:"llamaba", nos:"llamábamos", ellos:"llamaban"},
+  {inf:"lavar", yo:"lavaba", tu:"lavabas", el:"lavaba", nos:"lavábamos", ellos:"lavaban"},
+  {inf:"necesitar", yo:"necesitaba", tu:"necesitabas", el:"necesitaba", nos:"necesitábamos", ellos:"necesitaban"},
+  {inf:"ayudar", yo:"ayudaba", tu:"ayudabas", el:"ayudaba", nos:"ayudábamos", ellos:"ayudaban"},
+  {inf:"practicar", yo:"practicaba", tu:"practicabas", el:"practicaba", nos:"practicábamos", ellos:"practicaban"},
+  {inf:"dibujar", yo:"dibujaba", tu:"dibujabas", el:"dibujaba", nos:"dibujábamos", ellos:"dibujaban"},
+  {inf:"pintar", yo:"pintaba", tu:"pintabas", el:"pintaba", nos:"pintábamos", ellos:"pintaban"},
+  {inf:"tocar", yo:"tocaba", tu:"tocabas", el:"tocaba", nos:"tocábamos", ellos:"tocaban"},
+  {inf:"pasear", yo:"paseaba", tu:"paseabas", el:"paseaba", nos:"paseábamos", ellos:"paseaban"},
+  // ── ER verbs (-ía) ──
   {inf:"comer", yo:"comía", tu:"comías", el:"comía", nos:"comíamos", ellos:"comían"},
+  {inf:"beber", yo:"bebía", tu:"bebías", el:"bebía", nos:"bebíamos", ellos:"bebían"},
+  {inf:"leer", yo:"leía", tu:"leías", el:"leía", nos:"leíamos", ellos:"leían"},
+  {inf:"tener", yo:"tenía", tu:"tenías", el:"tenía", nos:"teníamos", ellos:"tenían"},
+  {inf:"correr", yo:"corría", tu:"corrías", el:"corría", nos:"corríamos", ellos:"corrían"},
+  {inf:"aprender", yo:"aprendía", tu:"aprendías", el:"aprendía", nos:"aprendíamos", ellos:"aprendían"},
+  {inf:"comprender", yo:"comprendía", tu:"comprendías", el:"comprendía", nos:"comprendíamos", ellos:"comprendían"},
+  {inf:"creer", yo:"creía", tu:"creías", el:"creía", nos:"creíamos", ellos:"creían"},
+  {inf:"querer", yo:"quería", tu:"querías", el:"quería", nos:"queríamos", ellos:"querían"},
+  {inf:"poder", yo:"podía", tu:"podías", el:"podía", nos:"podíamos", ellos:"podían"},
+  {inf:"hacer", yo:"hacía", tu:"hacías", el:"hacía", nos:"hacíamos", ellos:"hacían"},
+  {inf:"saber", yo:"sabía", tu:"sabías", el:"sabía", nos:"sabíamos", ellos:"sabían"},
+  // ── IR verbs (-ía) ──
   {inf:"vivir", yo:"vivía", tu:"vivías", el:"vivía", nos:"vivíamos", ellos:"vivían"},
   {inf:"escribir", yo:"escribía", tu:"escribías", el:"escribía", nos:"escribíamos", ellos:"escribían"},
-  {inf:"leer", yo:"leía", tu:"leías", el:"leía", nos:"leíamos", ellos:"leían"},
-  {inf:"beber", yo:"bebía", tu:"bebías", el:"bebía", nos:"bebíamos", ellos:"bebían"},
-  {inf:"tener", yo:"tenía", tu:"tenías", el:"tenía", nos:"teníamos", ellos:"tenían"},
+  {inf:"dormir", yo:"dormía", tu:"dormías", el:"dormía", nos:"dormíamos", ellos:"dormían"},
+  {inf:"salir", yo:"salía", tu:"salías", el:"salía", nos:"salíamos", ellos:"salían"},
+  {inf:"abrir", yo:"abría", tu:"abrías", el:"abría", nos:"abríamos", ellos:"abrían"},
+  {inf:"recibir", yo:"recibía", tu:"recibías", el:"recibía", nos:"recibíamos", ellos:"recibían"},
+  {inf:"compartir", yo:"compartía", tu:"compartías", el:"compartía", nos:"compartíamos", ellos:"compartían"},
+  {inf:"pedir", yo:"pedía", tu:"pedías", el:"pedía", nos:"pedíamos", ellos:"pedían"},
+  {inf:"preferir", yo:"prefería", tu:"preferías", el:"prefería", nos:"preferíamos", ellos:"preferían"},
+  {inf:"sentir", yo:"sentía", tu:"sentías", el:"sentía", nos:"sentíamos", ellos:"sentían"},
+  {inf:"decir", yo:"decía", tu:"decías", el:"decía", nos:"decíamos", ellos:"decían"},
+  {inf:"subir", yo:"subía", tu:"subías", el:"subía", nos:"subíamos", ellos:"subían"},
 ];
 const IRREGULAR_ITEMS = [
   {inf:"ser", yo:"era", tu:"eras", el:"era", nos:"éramos", ellos:"eran"},
@@ -595,18 +642,47 @@ const CONTEXTS = [
   {type:"Background", hint:"Background action (often with: mientras, cuando...)."},
 ];
 
-/* ── Sentence templates with optional verb restrictions ── */
+/* ── Sentence templates (30+) with optional verb restrictions ── */
 const SENTENCE_TEMPLATES = [
+  // ── Habit (12 templates) ──
   {ctx:"Habit", text:"Cuando era niño/a, {S} {V} en el parque todos los días.", extra:"(INF: {INF})"},
   {ctx:"Habit", text:"Antes, {S} siempre {V} mucho por la noche.", extra:"(INF: {INF})"},
   {ctx:"Habit", text:"Los fines de semana, {S} {V} con mi familia.", extra:"(INF: {INF})"},
+  {ctx:"Habit", text:"Cada verano, {S} {V} cerca de la playa.", extra:"(INF: {INF})"},
+  {ctx:"Habit", text:"De niño/a, {S} {V} después de la escuela.", extra:"(INF: {INF})"},
+  {ctx:"Habit", text:"Todos los días, {S} {V} por la mañana.", extra:"(INF: {INF})"},
+  {ctx:"Habit", text:"En esa época, {S} {V} con los amigos frecuentemente.", extra:"(INF: {INF})"},
+  {ctx:"Habit", text:"Cuando vivía en México, {S} siempre {V}.", extra:"(INF: {INF})"},
+  {ctx:"Habit", text:"Los domingos, {S} {V} en casa de los abuelos.", extra:"(INF: {INF})"},
+  {ctx:"Habit", text:"Normalmente, {S} {V} antes de cenar.", extra:"(INF: {INF})"},
+  {ctx:"Habit", text:"Todas las tardes, {S} {V} en el jardín.", extra:"(INF: {INF})"},
+  {ctx:"Habit", text:"Cuando tenía diez años, {S} {V} mucho.", extra:"(INF: {INF})"},
+  // ── Description (12 templates) ──
   {ctx:"Description", text:"De pequeño/a, {S} {V} muy tímido/a.", extra:"(INF: {INF})", verbs:["ser"]},
   {ctx:"Description", text:"En esa época, {S} {V} en una ciudad pequeña.", extra:"(INF: {INF})"},
   {ctx:"Description", text:"En aquellos tiempos, {S} {V} mucho.", extra:"(INF: {INF})"},
   {ctx:"Description", text:"Cuando {S} era joven, {V} a muchos lugares.", extra:"(INF: {INF})", verbs:["ir"]},
+  {ctx:"Description", text:"En los años 90, {S} {V} todos los días.", extra:"(INF: {INF})"},
+  {ctx:"Description", text:"A los cinco años, {S} ya {V} bastante bien.", extra:"(INF: {INF})"},
+  {ctx:"Description", text:"Cuando era estudiante, {S} {V} constantemente.", extra:"(INF: {INF})"},
+  {ctx:"Description", text:"En mi barrio, {S} siempre {V}.", extra:"(INF: {INF})"},
+  {ctx:"Description", text:"De joven, {S} {V} con mucha energía.", extra:"(INF: {INF})"},
+  {ctx:"Description", text:"En aquella casa, {S} {V} todo el tiempo.", extra:"(INF: {INF})"},
+  {ctx:"Description", text:"Antes del accidente, {S} {V} sin problemas.", extra:"(INF: {INF})"},
+  {ctx:"Description", text:"Cuando tenía quince años, {S} {V} a menudo.", extra:"(INF: {INF})"},
+  // ── Background (12 templates) ──
   {ctx:"Background", text:"{S} {V} cuando mi amigo llamó.", extra:"(INF: {INF})"},
   {ctx:"Background", text:"Mientras {S} {V}, escuchábamos música.", extra:"(INF: {INF})"},
   {ctx:"Background", text:"{S} {V} en la oficina y hacía frío.", extra:"(INF: {INF})"},
+  {ctx:"Background", text:"{S} {V} cuando empezó a llover.", extra:"(INF: {INF})"},
+  {ctx:"Background", text:"Mientras {S} {V}, sonó el teléfono.", extra:"(INF: {INF})"},
+  {ctx:"Background", text:"{S} {V} tranquilamente cuando llegaron los invitados.", extra:"(INF: {INF})"},
+  {ctx:"Background", text:"Cuando {S} {V}, alguien tocó la puerta.", extra:"(INF: {INF})"},
+  {ctx:"Background", text:"{S} {V} y de repente se fue la luz.", extra:"(INF: {INF})"},
+  {ctx:"Background", text:"Mientras {S} {V}, los niños jugaban afuera.", extra:"(INF: {INF})"},
+  {ctx:"Background", text:"{S} {V} en el parque cuando vimos un perro enorme.", extra:"(INF: {INF})"},
+  {ctx:"Background", text:"Eran las tres de la tarde y {S} todavía {V}.", extra:"(INF: {INF})"},
+  {ctx:"Background", text:"{S} {V} cuando de repente escuchamos un ruido.", extra:"(INF: {INF})"},
 ];
 
 /* ── Build a question ── */
