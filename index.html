@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Imperfecto A3 — Vibe Game</title>
+  <title>Pretérito A3 — Vibe Game</title>
   <style>
     :root{
       --bg:#0b0f1a;
@@ -299,12 +299,12 @@
   <div class="wrap">
     <div class="topbar">
       <div class="brand">
-        <h1>Imperfecto A3 — Vibe Game</h1>
-        <div class="sub">Mixed mode (MCQ + Fill) + Timed Chaos. Focus: -aba / -ía + ser/ir/ver.</div>
+        <h1>Pretérito A3 — Vibe Game</h1>
+        <div class="sub">Pretérito imperfecto & indefinido. Master both tenses for A3.</div>
       </div>
       <div class="pillrow">
         <div class="pill">⌛ Timed mode</div>
-        <div class="pill">🧩 Mixed questions</div>
+        <div class="pill">📚 Two tenses</div>
         <div class="pill">✨ Instant feedback</div>
       </div>
     </div>
@@ -324,7 +324,7 @@
             <div id="mcq" class="answers"></div>
             <!-- Fill -->
             <div id="fill" class="fill hidden">
-              <input id="fillInput" type="text" placeholder="Type the imperfect form (e.g., hablaba / vivíamos)"/>
+              <input id="fillInput" type="text" placeholder="Type the conjugated form…"/>
               <button id="submitFill" class="btn primary">Submit</button>
             </div>
             <div class="btnRow">
@@ -393,12 +393,20 @@
                 </select>
               </div>
               <div class="row">
+                <label for="tenseSelect">Tense</label>
+                <select id="tenseSelect">
+                  <option value="imp" selected>Imperfecto</option>
+                  <option value="pret">Indefinido</option>
+                  <option value="both">Mixed (both tenses)</option>
+                </select>
                 <label for="focus">Focus</label>
                 <select id="focus">
-                  <option value="all" selected>All (regular + ser/ir/ver)</option>
+                  <option value="all" selected>All verbs</option>
                   <option value="regular">Regular only</option>
-                  <option value="irregular">Irregular only (ser/ir/ver)</option>
+                  <option value="irregular">Irregular only</option>
                 </select>
+              </div>
+              <div class="row">
                 <label for="soundToggle">Sound</label>
                 <select id="soundToggle">
                   <option value="on" selected>On</option>
@@ -409,7 +417,8 @@
                 Tip: In class, share your screen and let classmates shout answers. Or assign teams and rotate who clicks.
               </p>
               <p class="mini">
-                Imperfect reminders: habits/descriptions/background in the past. Regular endings: <b>-aba</b> (AR), <b>-ía</b> (ER/IR). Irregular: <b>era</b>, <b>iba</b>, <b>veía</b>.
+                <b>Imperfecto:</b> habits, descriptions, background. Endings: <b>-aba</b> (AR), <b>-ía</b> (ER/IR). Irregular: <b>era, iba, veía</b>.<br>
+                <b>Indefinido:</b> completed actions, sequences, specific times. Endings: <b>-é/-aste/-ó</b> (AR), <b>-í/-iste/-ió</b> (ER/IR). Many irregulars!
               </p>
             </div>
           </div>
@@ -420,17 +429,16 @@
   </div>
 <script>
 /**
- * Imperfecto A3 — Vibe Game
- * - Mixed MCQ + Fill
- * - Timed + Practice (untimed) modes
- * - Focus: regular (-aba / -ía) + irregular ser/ir/ver
- * - Accent-sensitive grading
- * - Sound effects, auto-advance, MCQ highlights, question history
+ * Pretérito A3 — Vibe Game
+ * - Pretérito imperfecto & indefinido
+ * - Mixed MCQ + Fill, Timed + Practice modes
+ * - 55 verbs × 5 subjects × 2 tenses = 550 unique combos
+ * - Accent-sensitive grading, sound effects, confetti
  */
 const $ = (id)=>document.getElementById(id);
 
 const state = {
-  gameMode: "idle",       // "idle" | "timed" | "practice"
+  gameMode: "idle",
   running: false,
   timeLeft: 0,
   timerHandle: null,
@@ -457,25 +465,21 @@ function launchConfetti(){
   const H = canvas.height = window.innerHeight;
   const colors = ["#8a7dff","#ff7bd2","#46d38a","#ff5a7a","#ffd166","#4fc3f7","#ffffff","#a78bfa","#f472b6"];
   const pieces = [];
-  // Burst from two points (left-center and right-center) like party poppers
   const origins = [{x: W * 0.15, y: H * 0.5}, {x: W * 0.85, y: H * 0.5}];
   for (let i = 0; i < 200; i++){
     const o = origins[i % 2];
     const angle = (i % 2 === 0 ? -Math.PI * 0.7 : -Math.PI * 0.3) + (Math.random() - 0.5) * 1.2;
     const speed = 8 + Math.random() * 12;
     pieces.push({
-      x: o.x,
-      y: o.y,
-      w: 5 + Math.random() * 7,
-      h: 3 + Math.random() * 5,
+      x: o.x, y: o.y,
+      w: 5 + Math.random() * 7, h: 3 + Math.random() * 5,
       color: colors[Math.floor(Math.random() * colors.length)],
       vx: Math.cos(angle) * speed * (i % 2 === 0 ? 1 : -1) * -1,
       vy: Math.sin(angle) * speed,
       rot: Math.random() * Math.PI * 2,
       rv: (Math.random() - 0.5) * 0.2,
       gravity: 0.12 + Math.random() * 0.06,
-      drag: 0.98,
-      opacity: 1,
+      drag: 0.98, opacity: 1,
     });
   }
   let frame = 0;
@@ -486,20 +490,12 @@ function launchConfetti(){
     const fadeStart = maxFrames * 0.65;
     const fade = frame > fadeStart ? 1 - (frame - fadeStart) / (maxFrames - fadeStart) : 1;
     for (const p of pieces){
-      p.vx *= p.drag;
-      p.vy *= p.drag;
-      p.vy += p.gravity;
-      p.x += p.vx;
-      p.y += p.vy;
-      p.rot += p.rv;
+      p.vx *= p.drag; p.vy *= p.drag; p.vy += p.gravity;
+      p.x += p.vx; p.y += p.vy; p.rot += p.rv;
       p.opacity = Math.max(0, fade);
-      c.save();
-      c.translate(p.x, p.y);
-      c.rotate(p.rot);
-      c.globalAlpha = p.opacity;
-      c.fillStyle = p.color;
-      c.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-      c.restore();
+      c.save(); c.translate(p.x, p.y); c.rotate(p.rot);
+      c.globalAlpha = p.opacity; c.fillStyle = p.color;
+      c.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); c.restore();
     }
     if (frame < maxFrames) requestAnimationFrame(draw);
     else canvas.remove();
@@ -519,31 +515,26 @@ function playSound(type){
     const ctx = getAudioCtx();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = "sine";
+    osc.connect(gain); gain.connect(ctx.destination); osc.type = "sine";
     if (type === "correct"){
       osc.frequency.setValueAtTime(523, ctx.currentTime);
       osc.frequency.setValueAtTime(659, ctx.currentTime + 0.08);
       osc.frequency.setValueAtTime(784, ctx.currentTime + 0.16);
       gain.gain.setValueAtTime(0.2, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.35);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.35);
     } else if (type === "almost"){
       osc.frequency.setValueAtTime(440, ctx.currentTime);
       osc.frequency.setValueAtTime(415, ctx.currentTime + 0.12);
       gain.gain.setValueAtTime(0.15, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.3);
     } else {
       osc.frequency.setValueAtTime(330, ctx.currentTime);
       osc.frequency.setValueAtTime(260, ctx.currentTime + 0.1);
       gain.gain.setValueAtTime(0.18, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.3);
     }
   } catch(e){}
 }
@@ -553,11 +544,7 @@ function normalizeFull(s){
   return (s || "").toLowerCase().replace(/\s+/g," ").trim();
 }
 function normalizeStripped(s){
-  return (s || "")
-    .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-    .replace(/\s+/g," ")
-    .trim();
+  return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
 }
 
 function randInt(n){ return Math.floor(Math.random()*n); }
@@ -571,65 +558,232 @@ function shuffle(arr){
   return a;
 }
 
-/* ── Dataset (40 regular + 3 irregular = 43 verbs × 5 subjects = 215 combos) ── */
-const REGULAR_ITEMS = [
-  // ── AR verbs (-aba) ──
-  {inf:"hablar", yo:"hablaba", tu:"hablabas", el:"hablaba", nos:"hablábamos", ellos:"hablaban"},
-  {inf:"trabajar", yo:"trabajaba", tu:"trabajabas", el:"trabajaba", nos:"trabajábamos", ellos:"trabajaban"},
-  {inf:"estudiar", yo:"estudiaba", tu:"estudiabas", el:"estudiaba", nos:"estudiábamos", ellos:"estudiaban"},
-  {inf:"caminar", yo:"caminaba", tu:"caminabas", el:"caminaba", nos:"caminábamos", ellos:"caminaban"},
-  {inf:"comprar", yo:"compraba", tu:"comprabas", el:"compraba", nos:"comprábamos", ellos:"compraban"},
-  {inf:"mirar", yo:"miraba", tu:"mirabas", el:"miraba", nos:"mirábamos", ellos:"miraban"},
-  {inf:"jugar", yo:"jugaba", tu:"jugabas", el:"jugaba", nos:"jugábamos", ellos:"jugaban"},
-  {inf:"cocinar", yo:"cocinaba", tu:"cocinabas", el:"cocinaba", nos:"cocinábamos", ellos:"cocinaban"},
-  {inf:"bailar", yo:"bailaba", tu:"bailabas", el:"bailaba", nos:"bailábamos", ellos:"bailaban"},
-  {inf:"cantar", yo:"cantaba", tu:"cantabas", el:"cantaba", nos:"cantábamos", ellos:"cantaban"},
-  {inf:"nadar", yo:"nadaba", tu:"nadabas", el:"nadaba", nos:"nadábamos", ellos:"nadaban"},
-  {inf:"viajar", yo:"viajaba", tu:"viajabas", el:"viajaba", nos:"viajábamos", ellos:"viajaban"},
-  {inf:"escuchar", yo:"escuchaba", tu:"escuchabas", el:"escuchaba", nos:"escuchábamos", ellos:"escuchaban"},
-  {inf:"descansar", yo:"descansaba", tu:"descansabas", el:"descansaba", nos:"descansábamos", ellos:"descansaban"},
-  {inf:"llegar", yo:"llegaba", tu:"llegabas", el:"llegaba", nos:"llegábamos", ellos:"llegaban"},
-  {inf:"llamar", yo:"llamaba", tu:"llamabas", el:"llamaba", nos:"llamábamos", ellos:"llamaban"},
-  {inf:"lavar", yo:"lavaba", tu:"lavabas", el:"lavaba", nos:"lavábamos", ellos:"lavaban"},
-  {inf:"necesitar", yo:"necesitaba", tu:"necesitabas", el:"necesitaba", nos:"necesitábamos", ellos:"necesitaban"},
-  {inf:"ayudar", yo:"ayudaba", tu:"ayudabas", el:"ayudaba", nos:"ayudábamos", ellos:"ayudaban"},
-  {inf:"practicar", yo:"practicaba", tu:"practicabas", el:"practicaba", nos:"practicábamos", ellos:"practicaban"},
-  {inf:"dibujar", yo:"dibujaba", tu:"dibujabas", el:"dibujaba", nos:"dibujábamos", ellos:"dibujaban"},
-  {inf:"pintar", yo:"pintaba", tu:"pintabas", el:"pintaba", nos:"pintábamos", ellos:"pintaban"},
-  {inf:"tocar", yo:"tocaba", tu:"tocabas", el:"tocaba", nos:"tocábamos", ellos:"tocaban"},
-  {inf:"pasear", yo:"paseaba", tu:"paseabas", el:"paseaba", nos:"paseábamos", ellos:"paseaban"},
-  // ── ER verbs (-ía) ──
-  {inf:"comer", yo:"comía", tu:"comías", el:"comía", nos:"comíamos", ellos:"comían"},
-  {inf:"beber", yo:"bebía", tu:"bebías", el:"bebía", nos:"bebíamos", ellos:"bebían"},
-  {inf:"leer", yo:"leía", tu:"leías", el:"leía", nos:"leíamos", ellos:"leían"},
-  {inf:"tener", yo:"tenía", tu:"tenías", el:"tenía", nos:"teníamos", ellos:"tenían"},
-  {inf:"correr", yo:"corría", tu:"corrías", el:"corría", nos:"corríamos", ellos:"corrían"},
-  {inf:"aprender", yo:"aprendía", tu:"aprendías", el:"aprendía", nos:"aprendíamos", ellos:"aprendían"},
-  {inf:"comprender", yo:"comprendía", tu:"comprendías", el:"comprendía", nos:"comprendíamos", ellos:"comprendían"},
-  {inf:"creer", yo:"creía", tu:"creías", el:"creía", nos:"creíamos", ellos:"creían"},
-  {inf:"querer", yo:"quería", tu:"querías", el:"quería", nos:"queríamos", ellos:"querían"},
-  {inf:"poder", yo:"podía", tu:"podías", el:"podía", nos:"podíamos", ellos:"podían"},
-  {inf:"hacer", yo:"hacía", tu:"hacías", el:"hacía", nos:"hacíamos", ellos:"hacían"},
-  {inf:"saber", yo:"sabía", tu:"sabías", el:"sabía", nos:"sabíamos", ellos:"sabían"},
-  // ── IR verbs (-ía) ──
-  {inf:"vivir", yo:"vivía", tu:"vivías", el:"vivía", nos:"vivíamos", ellos:"vivían"},
-  {inf:"escribir", yo:"escribía", tu:"escribías", el:"escribía", nos:"escribíamos", ellos:"escribían"},
-  {inf:"dormir", yo:"dormía", tu:"dormías", el:"dormía", nos:"dormíamos", ellos:"dormían"},
-  {inf:"salir", yo:"salía", tu:"salías", el:"salía", nos:"salíamos", ellos:"salían"},
-  {inf:"abrir", yo:"abría", tu:"abrías", el:"abría", nos:"abríamos", ellos:"abrían"},
-  {inf:"recibir", yo:"recibía", tu:"recibías", el:"recibía", nos:"recibíamos", ellos:"recibían"},
-  {inf:"compartir", yo:"compartía", tu:"compartías", el:"compartía", nos:"compartíamos", ellos:"compartían"},
-  {inf:"pedir", yo:"pedía", tu:"pedías", el:"pedía", nos:"pedíamos", ellos:"pedían"},
-  {inf:"preferir", yo:"prefería", tu:"preferías", el:"prefería", nos:"preferíamos", ellos:"preferían"},
-  {inf:"sentir", yo:"sentía", tu:"sentías", el:"sentía", nos:"sentíamos", ellos:"sentían"},
-  {inf:"decir", yo:"decía", tu:"decías", el:"decía", nos:"decíamos", ellos:"decían"},
-  {inf:"subir", yo:"subía", tu:"subías", el:"subía", nos:"subíamos", ellos:"subían"},
+/* ══════════════════════════════════════════════════════════════
+   VERB DATABASE — 55 verbs with imperfecto + indefinido forms
+   Each verb: { inf, imp:{yo,tu,el,nos,ellos}, pret:{...}, irregImp, irregPret }
+   ══════════════════════════════════════════════════════════════ */
+const VERBS = [
+  // ── AR VERBS (regular in both tenses) ──
+  {inf:"hablar",
+    imp:{yo:"hablaba",tu:"hablabas",el:"hablaba",nos:"hablábamos",ellos:"hablaban"},
+    pret:{yo:"hablé",tu:"hablaste",el:"habló",nos:"hablamos",ellos:"hablaron"},
+    irregImp:false, irregPret:false},
+  {inf:"trabajar",
+    imp:{yo:"trabajaba",tu:"trabajabas",el:"trabajaba",nos:"trabajábamos",ellos:"trabajaban"},
+    pret:{yo:"trabajé",tu:"trabajaste",el:"trabajó",nos:"trabajamos",ellos:"trabajaron"},
+    irregImp:false, irregPret:false},
+  {inf:"estudiar",
+    imp:{yo:"estudiaba",tu:"estudiabas",el:"estudiaba",nos:"estudiábamos",ellos:"estudiaban"},
+    pret:{yo:"estudié",tu:"estudiaste",el:"estudió",nos:"estudiamos",ellos:"estudiaron"},
+    irregImp:false, irregPret:false},
+  {inf:"caminar",
+    imp:{yo:"caminaba",tu:"caminabas",el:"caminaba",nos:"caminábamos",ellos:"caminaban"},
+    pret:{yo:"caminé",tu:"caminaste",el:"caminó",nos:"caminamos",ellos:"caminaron"},
+    irregImp:false, irregPret:false},
+  {inf:"comprar",
+    imp:{yo:"compraba",tu:"comprabas",el:"compraba",nos:"comprábamos",ellos:"compraban"},
+    pret:{yo:"compré",tu:"compraste",el:"compró",nos:"compramos",ellos:"compraron"},
+    irregImp:false, irregPret:false},
+  {inf:"mirar",
+    imp:{yo:"miraba",tu:"mirabas",el:"miraba",nos:"mirábamos",ellos:"miraban"},
+    pret:{yo:"miré",tu:"miraste",el:"miró",nos:"miramos",ellos:"miraron"},
+    irregImp:false, irregPret:false},
+  {inf:"cocinar",
+    imp:{yo:"cocinaba",tu:"cocinabas",el:"cocinaba",nos:"cocinábamos",ellos:"cocinaban"},
+    pret:{yo:"cociné",tu:"cocinaste",el:"cocinó",nos:"cocinamos",ellos:"cocinaron"},
+    irregImp:false, irregPret:false},
+  {inf:"bailar",
+    imp:{yo:"bailaba",tu:"bailabas",el:"bailaba",nos:"bailábamos",ellos:"bailaban"},
+    pret:{yo:"bailé",tu:"bailaste",el:"bailó",nos:"bailamos",ellos:"bailaron"},
+    irregImp:false, irregPret:false},
+  {inf:"cantar",
+    imp:{yo:"cantaba",tu:"cantabas",el:"cantaba",nos:"cantábamos",ellos:"cantaban"},
+    pret:{yo:"canté",tu:"cantaste",el:"cantó",nos:"cantamos",ellos:"cantaron"},
+    irregImp:false, irregPret:false},
+  {inf:"nadar",
+    imp:{yo:"nadaba",tu:"nadabas",el:"nadaba",nos:"nadábamos",ellos:"nadaban"},
+    pret:{yo:"nadé",tu:"nadaste",el:"nadó",nos:"nadamos",ellos:"nadaron"},
+    irregImp:false, irregPret:false},
+  {inf:"viajar",
+    imp:{yo:"viajaba",tu:"viajabas",el:"viajaba",nos:"viajábamos",ellos:"viajaban"},
+    pret:{yo:"viajé",tu:"viajaste",el:"viajó",nos:"viajamos",ellos:"viajaron"},
+    irregImp:false, irregPret:false},
+  {inf:"escuchar",
+    imp:{yo:"escuchaba",tu:"escuchabas",el:"escuchaba",nos:"escuchábamos",ellos:"escuchaban"},
+    pret:{yo:"escuché",tu:"escuchaste",el:"escuchó",nos:"escuchamos",ellos:"escucharon"},
+    irregImp:false, irregPret:false},
+  {inf:"descansar",
+    imp:{yo:"descansaba",tu:"descansabas",el:"descansaba",nos:"descansábamos",ellos:"descansaban"},
+    pret:{yo:"descansé",tu:"descansaste",el:"descansó",nos:"descansamos",ellos:"descansaron"},
+    irregImp:false, irregPret:false},
+  {inf:"llamar",
+    imp:{yo:"llamaba",tu:"llamabas",el:"llamaba",nos:"llamábamos",ellos:"llamaban"},
+    pret:{yo:"llamé",tu:"llamaste",el:"llamó",nos:"llamamos",ellos:"llamaron"},
+    irregImp:false, irregPret:false},
+  {inf:"necesitar",
+    imp:{yo:"necesitaba",tu:"necesitabas",el:"necesitaba",nos:"necesitábamos",ellos:"necesitaban"},
+    pret:{yo:"necesité",tu:"necesitaste",el:"necesitó",nos:"necesitamos",ellos:"necesitaron"},
+    irregImp:false, irregPret:false},
+  {inf:"ayudar",
+    imp:{yo:"ayudaba",tu:"ayudabas",el:"ayudaba",nos:"ayudábamos",ellos:"ayudaban"},
+    pret:{yo:"ayudé",tu:"ayudaste",el:"ayudó",nos:"ayudamos",ellos:"ayudaron"},
+    irregImp:false, irregPret:false},
+  {inf:"pintar",
+    imp:{yo:"pintaba",tu:"pintabas",el:"pintaba",nos:"pintábamos",ellos:"pintaban"},
+    pret:{yo:"pinté",tu:"pintaste",el:"pintó",nos:"pintamos",ellos:"pintaron"},
+    irregImp:false, irregPret:false},
+  {inf:"pasear",
+    imp:{yo:"paseaba",tu:"paseabas",el:"paseaba",nos:"paseábamos",ellos:"paseaban"},
+    pret:{yo:"paseé",tu:"paseaste",el:"paseó",nos:"paseamos",ellos:"pasearon"},
+    irregImp:false, irregPret:false},
+  // ── AR with spelling changes in pretérito (irregular pret) ──
+  {inf:"jugar",
+    imp:{yo:"jugaba",tu:"jugabas",el:"jugaba",nos:"jugábamos",ellos:"jugaban"},
+    pret:{yo:"jugué",tu:"jugaste",el:"jugó",nos:"jugamos",ellos:"jugaron"},
+    irregImp:false, irregPret:true},
+  {inf:"llegar",
+    imp:{yo:"llegaba",tu:"llegabas",el:"llegaba",nos:"llegábamos",ellos:"llegaban"},
+    pret:{yo:"llegué",tu:"llegaste",el:"llegó",nos:"llegamos",ellos:"llegaron"},
+    irregImp:false, irregPret:true},
+  {inf:"practicar",
+    imp:{yo:"practicaba",tu:"practicabas",el:"practicaba",nos:"practicábamos",ellos:"practicaban"},
+    pret:{yo:"practiqué",tu:"practicaste",el:"practicó",nos:"practicamos",ellos:"practicaron"},
+    irregImp:false, irregPret:true},
+  {inf:"tocar",
+    imp:{yo:"tocaba",tu:"tocabas",el:"tocaba",nos:"tocábamos",ellos:"tocaban"},
+    pret:{yo:"toqué",tu:"tocaste",el:"tocó",nos:"tocamos",ellos:"tocaron"},
+    irregImp:false, irregPret:true},
+  // ── ER/IR VERBS (regular in both tenses) ──
+  {inf:"comer",
+    imp:{yo:"comía",tu:"comías",el:"comía",nos:"comíamos",ellos:"comían"},
+    pret:{yo:"comí",tu:"comiste",el:"comió",nos:"comimos",ellos:"comieron"},
+    irregImp:false, irregPret:false},
+  {inf:"beber",
+    imp:{yo:"bebía",tu:"bebías",el:"bebía",nos:"bebíamos",ellos:"bebían"},
+    pret:{yo:"bebí",tu:"bebiste",el:"bebió",nos:"bebimos",ellos:"bebieron"},
+    irregImp:false, irregPret:false},
+  {inf:"vivir",
+    imp:{yo:"vivía",tu:"vivías",el:"vivía",nos:"vivíamos",ellos:"vivían"},
+    pret:{yo:"viví",tu:"viviste",el:"vivió",nos:"vivimos",ellos:"vivieron"},
+    irregImp:false, irregPret:false},
+  {inf:"escribir",
+    imp:{yo:"escribía",tu:"escribías",el:"escribía",nos:"escribíamos",ellos:"escribían"},
+    pret:{yo:"escribí",tu:"escribiste",el:"escribió",nos:"escribimos",ellos:"escribieron"},
+    irregImp:false, irregPret:false},
+  {inf:"correr",
+    imp:{yo:"corría",tu:"corrías",el:"corría",nos:"corríamos",ellos:"corrían"},
+    pret:{yo:"corrí",tu:"corriste",el:"corrió",nos:"corrimos",ellos:"corrieron"},
+    irregImp:false, irregPret:false},
+  {inf:"aprender",
+    imp:{yo:"aprendía",tu:"aprendías",el:"aprendía",nos:"aprendíamos",ellos:"aprendían"},
+    pret:{yo:"aprendí",tu:"aprendiste",el:"aprendió",nos:"aprendimos",ellos:"aprendieron"},
+    irregImp:false, irregPret:false},
+  {inf:"abrir",
+    imp:{yo:"abría",tu:"abrías",el:"abría",nos:"abríamos",ellos:"abrían"},
+    pret:{yo:"abrí",tu:"abriste",el:"abrió",nos:"abrimos",ellos:"abrieron"},
+    irregImp:false, irregPret:false},
+  {inf:"recibir",
+    imp:{yo:"recibía",tu:"recibías",el:"recibía",nos:"recibíamos",ellos:"recibían"},
+    pret:{yo:"recibí",tu:"recibiste",el:"recibió",nos:"recibimos",ellos:"recibieron"},
+    irregImp:false, irregPret:false},
+  {inf:"compartir",
+    imp:{yo:"compartía",tu:"compartías",el:"compartía",nos:"compartíamos",ellos:"compartían"},
+    pret:{yo:"compartí",tu:"compartiste",el:"compartió",nos:"compartimos",ellos:"compartieron"},
+    irregImp:false, irregPret:false},
+  {inf:"subir",
+    imp:{yo:"subía",tu:"subías",el:"subía",nos:"subíamos",ellos:"subían"},
+    pret:{yo:"subí",tu:"subiste",el:"subió",nos:"subimos",ellos:"subieron"},
+    irregImp:false, irregPret:false},
+  // ── ER/IR with IRREGULAR PRETÉRITO (stem changes / strong preterits) ──
+  {inf:"tener",
+    imp:{yo:"tenía",tu:"tenías",el:"tenía",nos:"teníamos",ellos:"tenían"},
+    pret:{yo:"tuve",tu:"tuviste",el:"tuvo",nos:"tuvimos",ellos:"tuvieron"},
+    irregImp:false, irregPret:true},
+  {inf:"estar",
+    imp:{yo:"estaba",tu:"estabas",el:"estaba",nos:"estábamos",ellos:"estaban"},
+    pret:{yo:"estuve",tu:"estuviste",el:"estuvo",nos:"estuvimos",ellos:"estuvieron"},
+    irregImp:false, irregPret:true},
+  {inf:"poder",
+    imp:{yo:"podía",tu:"podías",el:"podía",nos:"podíamos",ellos:"podían"},
+    pret:{yo:"pude",tu:"pudiste",el:"pudo",nos:"pudimos",ellos:"pudieron"},
+    irregImp:false, irregPret:true},
+  {inf:"poner",
+    imp:{yo:"ponía",tu:"ponías",el:"ponía",nos:"poníamos",ellos:"ponían"},
+    pret:{yo:"puse",tu:"pusiste",el:"puso",nos:"pusimos",ellos:"pusieron"},
+    irregImp:false, irregPret:true},
+  {inf:"saber",
+    imp:{yo:"sabía",tu:"sabías",el:"sabía",nos:"sabíamos",ellos:"sabían"},
+    pret:{yo:"supe",tu:"supiste",el:"supo",nos:"supimos",ellos:"supieron"},
+    irregImp:false, irregPret:true},
+  {inf:"querer",
+    imp:{yo:"quería",tu:"querías",el:"quería",nos:"queríamos",ellos:"querían"},
+    pret:{yo:"quise",tu:"quisiste",el:"quiso",nos:"quisimos",ellos:"quisieron"},
+    irregImp:false, irregPret:true},
+  {inf:"venir",
+    imp:{yo:"venía",tu:"venías",el:"venía",nos:"veníamos",ellos:"venían"},
+    pret:{yo:"vine",tu:"viniste",el:"vino",nos:"vinimos",ellos:"vinieron"},
+    irregImp:false, irregPret:true},
+  {inf:"hacer",
+    imp:{yo:"hacía",tu:"hacías",el:"hacía",nos:"hacíamos",ellos:"hacían"},
+    pret:{yo:"hice",tu:"hiciste",el:"hizo",nos:"hicimos",ellos:"hicieron"},
+    irregImp:false, irregPret:true},
+  {inf:"decir",
+    imp:{yo:"decía",tu:"decías",el:"decía",nos:"decíamos",ellos:"decían"},
+    pret:{yo:"dije",tu:"dijiste",el:"dijo",nos:"dijimos",ellos:"dijeron"},
+    irregImp:false, irregPret:true},
+  {inf:"traer",
+    imp:{yo:"traía",tu:"traías",el:"traía",nos:"traíamos",ellos:"traían"},
+    pret:{yo:"traje",tu:"trajiste",el:"trajo",nos:"trajimos",ellos:"trajeron"},
+    irregImp:false, irregPret:true},
+  {inf:"dar",
+    imp:{yo:"daba",tu:"dabas",el:"daba",nos:"dábamos",ellos:"daban"},
+    pret:{yo:"di",tu:"diste",el:"dio",nos:"dimos",ellos:"dieron"},
+    irregImp:false, irregPret:true},
+  {inf:"salir",
+    imp:{yo:"salía",tu:"salías",el:"salía",nos:"salíamos",ellos:"salían"},
+    pret:{yo:"salí",tu:"saliste",el:"salió",nos:"salimos",ellos:"salieron"},
+    irregImp:false, irregPret:false},
+  // ── Stem-changing in pretérito (e→i, o→u) ──
+  {inf:"dormir",
+    imp:{yo:"dormía",tu:"dormías",el:"dormía",nos:"dormíamos",ellos:"dormían"},
+    pret:{yo:"dormí",tu:"dormiste",el:"durmió",nos:"dormimos",ellos:"durmieron"},
+    irregImp:false, irregPret:true},
+  {inf:"pedir",
+    imp:{yo:"pedía",tu:"pedías",el:"pedía",nos:"pedíamos",ellos:"pedían"},
+    pret:{yo:"pedí",tu:"pediste",el:"pidió",nos:"pedimos",ellos:"pidieron"},
+    irregImp:false, irregPret:true},
+  {inf:"sentir",
+    imp:{yo:"sentía",tu:"sentías",el:"sentía",nos:"sentíamos",ellos:"sentían"},
+    pret:{yo:"sentí",tu:"sentiste",el:"sintió",nos:"sentimos",ellos:"sintieron"},
+    irregImp:false, irregPret:true},
+  {inf:"preferir",
+    imp:{yo:"prefería",tu:"preferías",el:"prefería",nos:"preferíamos",ellos:"preferían"},
+    pret:{yo:"preferí",tu:"preferiste",el:"prefirió",nos:"preferimos",ellos:"prefirieron"},
+    irregImp:false, irregPret:true},
+  // ── Spelling change: vowel stem → -yó/-yeron ──
+  {inf:"leer",
+    imp:{yo:"leía",tu:"leías",el:"leía",nos:"leíamos",ellos:"leían"},
+    pret:{yo:"leí",tu:"leíste",el:"leyó",nos:"leímos",ellos:"leyeron"},
+    irregImp:false, irregPret:true},
+  {inf:"creer",
+    imp:{yo:"creía",tu:"creías",el:"creía",nos:"creíamos",ellos:"creían"},
+    pret:{yo:"creí",tu:"creíste",el:"creyó",nos:"creímos",ellos:"creyeron"},
+    irregImp:false, irregPret:true},
+  // ── IRREGULAR IN BOTH TENSES ──
+  {inf:"ser",
+    imp:{yo:"era",tu:"eras",el:"era",nos:"éramos",ellos:"eran"},
+    pret:{yo:"fui",tu:"fuiste",el:"fue",nos:"fuimos",ellos:"fueron"},
+    irregImp:true, irregPret:true},
+  {inf:"ir",
+    imp:{yo:"iba",tu:"ibas",el:"iba",nos:"íbamos",ellos:"iban"},
+    pret:{yo:"fui",tu:"fuiste",el:"fue",nos:"fuimos",ellos:"fueron"},
+    irregImp:true, irregPret:true},
+  {inf:"ver",
+    imp:{yo:"veía",tu:"veías",el:"veía",nos:"veíamos",ellos:"veían"},
+    pret:{yo:"vi",tu:"viste",el:"vio",nos:"vimos",ellos:"vieron"},
+    irregImp:true, irregPret:true},
 ];
-const IRREGULAR_ITEMS = [
-  {inf:"ser", yo:"era", tu:"eras", el:"era", nos:"éramos", ellos:"eran"},
-  {inf:"ir", yo:"iba", tu:"ibas", el:"iba", nos:"íbamos", ellos:"iban"},
-  {inf:"ver", yo:"veía", tu:"veías", el:"veía", nos:"veíamos", ellos:"veían"},
-];
+
 const SUBJECTS = [
   {key:"yo", label:"yo"},
   {key:"tu", label:"tú"},
@@ -637,79 +791,127 @@ const SUBJECTS = [
   {key:"nos", label:"nosotros/as"},
   {key:"ellos", label:"ellos/ellas/ustedes"},
 ];
-const CONTEXTS = [
-  {type:"Habit", hint:"Habit / repeated action in the past (often: siempre, todos los días, de niño/a)."},
-  {type:"Description", hint:"Description/background (how it was: age, feelings, weather, setting)."},
-  {type:"Background", hint:"Background action (often with: mientras, cuando...)."},
+
+/* ══════════════════════════════════════════════════════════════
+   SENTENCE TEMPLATES — tense-tagged
+   tense: "imp" = imperfecto, "pret" = indefinido
+   ══════════════════════════════════════════════════════════════ */
+const SENTENCE_TEMPLATES = [
+  // ── IMPERFECTO: Habit (12) ──
+  {tense:"imp", ctx:"Habit", text:"Cuando era niño/a, {S} {V} en el parque todos los días.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Habit", text:"Antes, {S} siempre {V} mucho por la noche.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Habit", text:"Los fines de semana, {S} {V} con mi familia.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Habit", text:"Cada verano, {S} {V} cerca de la playa.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Habit", text:"De niño/a, {S} {V} después de la escuela.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Habit", text:"Todos los días, {S} {V} por la mañana.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Habit", text:"En esa época, {S} {V} con los amigos frecuentemente.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Habit", text:"Los domingos, {S} {V} en casa de los abuelos.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Habit", text:"Normalmente, {S} {V} antes de cenar.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Habit", text:"Todas las tardes, {S} {V} en el jardín.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Habit", text:"Cuando tenía diez años, {S} {V} mucho.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Habit", text:"Siempre {S} {V} antes de ir al trabajo.", extra:"(INF: {INF})"},
+  // ── IMPERFECTO: Description (10) ──
+  {tense:"imp", ctx:"Description", text:"De pequeño/a, {S} {V} muy tímido/a.", extra:"(INF: {INF})", verbs:["ser"]},
+  {tense:"imp", ctx:"Description", text:"En esa época, {S} {V} en una ciudad pequeña.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Description", text:"En aquellos tiempos, {S} {V} mucho.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Description", text:"Cuando {S} era joven, {V} a muchos lugares.", extra:"(INF: {INF})", verbs:["ir"]},
+  {tense:"imp", ctx:"Description", text:"A los cinco años, {S} ya {V} bastante bien.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Description", text:"En mi barrio, {S} siempre {V}.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Description", text:"De joven, {S} {V} con mucha energía.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Description", text:"En aquella casa, {S} {V} todo el tiempo.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Description", text:"Antes del accidente, {S} {V} sin problemas.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Description", text:"Cuando tenía quince años, {S} {V} a menudo.", extra:"(INF: {INF})"},
+  // ── IMPERFECTO: Background (12) ──
+  {tense:"imp", ctx:"Background", text:"{S} {V} cuando mi amigo llamó.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Background", text:"Mientras {S} {V}, escuchábamos música.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Background", text:"{S} {V} en la oficina y hacía frío.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Background", text:"{S} {V} cuando empezó a llover.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Background", text:"Mientras {S} {V}, sonó el teléfono.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Background", text:"{S} {V} tranquilamente cuando llegaron los invitados.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Background", text:"Cuando {S} {V}, alguien tocó la puerta.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Background", text:"{S} {V} y de repente se fue la luz.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Background", text:"Mientras {S} {V}, los niños jugaban afuera.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Background", text:"{S} {V} en el parque cuando vimos un perro enorme.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Background", text:"Eran las tres de la tarde y {S} todavía {V}.", extra:"(INF: {INF})"},
+  {tense:"imp", ctx:"Background", text:"{S} {V} cuando de repente escuchamos un ruido.", extra:"(INF: {INF})"},
+  // ── INDEFINIDO: Completed action (12) ──
+  {tense:"pret", ctx:"Completed", text:"Ayer, {S} {V} en la tienda.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Completed", text:"El lunes pasado, {S} {V} una carta.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Completed", text:"Anoche, {S} {V} a las diez.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Completed", text:"La semana pasada, {S} {V} mucho.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Completed", text:"El mes pasado, {S} {V} por primera vez.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Completed", text:"Esa noche, {S} {V} hasta muy tarde.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Completed", text:"El viernes, {S} {V} con los compañeros.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Completed", text:"Ayer por la mañana, {S} {V} temprano.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Completed", text:"Hace dos días, {S} {V} algo interesante.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Completed", text:"El año pasado, {S} {V} a otro país.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Completed", text:"Aquel día, {S} {V} sin parar.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Completed", text:"Una vez, {S} {V} algo increíble.", extra:"(INF: {INF})"},
+  // ── INDEFINIDO: Sequence (8) ──
+  {tense:"pret", ctx:"Sequence", text:"Primero {S} {V} y luego salió.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Sequence", text:"{S} {V} y después fue al cine.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Sequence", text:"{S} {V}, cerró la puerta y se fue.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Sequence", text:"Cuando llegó a casa, {S} {V} inmediatamente.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Sequence", text:"{S} {V} rápidamente y salió corriendo.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Sequence", text:"Al final del día, {S} {V} y descansó.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Sequence", text:"{S} {V} primero y después comió.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"Sequence", text:"Después de la clase, {S} {V} en la biblioteca.", extra:"(INF: {INF})"},
+  // ── INDEFINIDO: Specific time (8) ──
+  {tense:"pret", ctx:"SpecificTime", text:"En 2020, {S} {V} a España.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"SpecificTime", text:"El verano pasado, {S} {V} mucho.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"SpecificTime", text:"A las ocho de la mañana, {S} {V}.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"SpecificTime", text:"Durante las vacaciones, {S} {V} todos los monumentos.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"SpecificTime", text:"En enero, {S} {V} un curso nuevo.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"SpecificTime", text:"El 25 de diciembre, {S} {V} con toda la familia.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"SpecificTime", text:"Aquella Navidad, {S} {V} algo especial.", extra:"(INF: {INF})"},
+  {tense:"pret", ctx:"SpecificTime", text:"En la fiesta de cumpleaños, {S} {V} toda la noche.", extra:"(INF: {INF})"},
 ];
 
-/* ── Sentence templates (30+) with optional verb restrictions ── */
-const SENTENCE_TEMPLATES = [
-  // ── Habit (12 templates) ──
-  {ctx:"Habit", text:"Cuando era niño/a, {S} {V} en el parque todos los días.", extra:"(INF: {INF})"},
-  {ctx:"Habit", text:"Antes, {S} siempre {V} mucho por la noche.", extra:"(INF: {INF})"},
-  {ctx:"Habit", text:"Los fines de semana, {S} {V} con mi familia.", extra:"(INF: {INF})"},
-  {ctx:"Habit", text:"Cada verano, {S} {V} cerca de la playa.", extra:"(INF: {INF})"},
-  {ctx:"Habit", text:"De niño/a, {S} {V} después de la escuela.", extra:"(INF: {INF})"},
-  {ctx:"Habit", text:"Todos los días, {S} {V} por la mañana.", extra:"(INF: {INF})"},
-  {ctx:"Habit", text:"En esa época, {S} {V} con los amigos frecuentemente.", extra:"(INF: {INF})"},
-  {ctx:"Habit", text:"Cuando vivía en México, {S} siempre {V}.", extra:"(INF: {INF})"},
-  {ctx:"Habit", text:"Los domingos, {S} {V} en casa de los abuelos.", extra:"(INF: {INF})"},
-  {ctx:"Habit", text:"Normalmente, {S} {V} antes de cenar.", extra:"(INF: {INF})"},
-  {ctx:"Habit", text:"Todas las tardes, {S} {V} en el jardín.", extra:"(INF: {INF})"},
-  {ctx:"Habit", text:"Cuando tenía diez años, {S} {V} mucho.", extra:"(INF: {INF})"},
-  // ── Description (12 templates) ──
-  {ctx:"Description", text:"De pequeño/a, {S} {V} muy tímido/a.", extra:"(INF: {INF})", verbs:["ser"]},
-  {ctx:"Description", text:"En esa época, {S} {V} en una ciudad pequeña.", extra:"(INF: {INF})"},
-  {ctx:"Description", text:"En aquellos tiempos, {S} {V} mucho.", extra:"(INF: {INF})"},
-  {ctx:"Description", text:"Cuando {S} era joven, {V} a muchos lugares.", extra:"(INF: {INF})", verbs:["ir"]},
-  {ctx:"Description", text:"En los años 90, {S} {V} todos los días.", extra:"(INF: {INF})"},
-  {ctx:"Description", text:"A los cinco años, {S} ya {V} bastante bien.", extra:"(INF: {INF})"},
-  {ctx:"Description", text:"Cuando era estudiante, {S} {V} constantemente.", extra:"(INF: {INF})"},
-  {ctx:"Description", text:"En mi barrio, {S} siempre {V}.", extra:"(INF: {INF})"},
-  {ctx:"Description", text:"De joven, {S} {V} con mucha energía.", extra:"(INF: {INF})"},
-  {ctx:"Description", text:"En aquella casa, {S} {V} todo el tiempo.", extra:"(INF: {INF})"},
-  {ctx:"Description", text:"Antes del accidente, {S} {V} sin problemas.", extra:"(INF: {INF})"},
-  {ctx:"Description", text:"Cuando tenía quince años, {S} {V} a menudo.", extra:"(INF: {INF})"},
-  // ── Background (12 templates) ──
-  {ctx:"Background", text:"{S} {V} cuando mi amigo llamó.", extra:"(INF: {INF})"},
-  {ctx:"Background", text:"Mientras {S} {V}, escuchábamos música.", extra:"(INF: {INF})"},
-  {ctx:"Background", text:"{S} {V} en la oficina y hacía frío.", extra:"(INF: {INF})"},
-  {ctx:"Background", text:"{S} {V} cuando empezó a llover.", extra:"(INF: {INF})"},
-  {ctx:"Background", text:"Mientras {S} {V}, sonó el teléfono.", extra:"(INF: {INF})"},
-  {ctx:"Background", text:"{S} {V} tranquilamente cuando llegaron los invitados.", extra:"(INF: {INF})"},
-  {ctx:"Background", text:"Cuando {S} {V}, alguien tocó la puerta.", extra:"(INF: {INF})"},
-  {ctx:"Background", text:"{S} {V} y de repente se fue la luz.", extra:"(INF: {INF})"},
-  {ctx:"Background", text:"Mientras {S} {V}, los niños jugaban afuera.", extra:"(INF: {INF})"},
-  {ctx:"Background", text:"{S} {V} en el parque cuando vimos un perro enorme.", extra:"(INF: {INF})"},
-  {ctx:"Background", text:"Eran las tres de la tarde y {S} todavía {V}.", extra:"(INF: {INF})"},
-  {ctx:"Background", text:"{S} {V} cuando de repente escuchamos un ruido.", extra:"(INF: {INF})"},
-];
+/* Context hints by tense */
+const CONTEXT_HINTS = {
+  Habit:       "Imperfecto: Habit / repeated action in the past (siempre, todos los días, de niño/a).",
+  Description: "Imperfecto: Description / background (how things were, feelings, setting).",
+  Background:  "Imperfecto: Background action interrupted by another event (mientras, cuando...).",
+  Completed:   "Indefinido: Completed, one-time action in the past (ayer, una vez, el lunes pasado).",
+  Sequence:    "Indefinido: Action in a sequence of events (primero... luego... después...).",
+  SpecificTime:"Indefinido: Action at a specific time or date (en 2020, a las ocho, el viernes).",
+};
 
 /* ── Tricky distractor generators ── */
 
-// Build a WRONG-ENDING fake: swap -aba↔-ía pattern
-function buildFakeForm(inf, subjKey, correctAnswer){
-  const stem = inf.slice(0, -2); // remove -ar/-er/-ir
+// Wrong-ending fake: swap -aba↔-ía pattern (for imperfecto)
+function buildFakeImpForm(inf, subjKey, correctAnswer){
+  const stem = inf.slice(0, -2);
   const isAR = inf.endsWith("ar");
-  // Swap ending family: AR verbs get -ía endings, ER/IR verbs get -aba endings
   const fakeMap = {
-    yo:   isAR ? stem + "ía"       : stem + "aba",
-    tu:   isAR ? stem + "ías"      : stem + "abas",
-    el:   isAR ? stem + "ía"       : stem + "aba",
-    nos:  isAR ? stem + "íamos"    : stem + "ábamos",
-    ellos:isAR ? stem + "ían"      : stem + "aban",
+    yo:   isAR ? stem + "ía"    : stem + "aba",
+    tu:   isAR ? stem + "ías"   : stem + "abas",
+    el:   isAR ? stem + "ía"    : stem + "aba",
+    nos:  isAR ? stem + "íamos" : stem + "ábamos",
+    ellos:isAR ? stem + "ían"   : stem + "aban",
   };
   const fake = fakeMap[subjKey];
   return (fake && fake !== correctAnswer) ? fake : null;
 }
 
-// Build a PRESENT-TENSE trap form
+// Wrong-ending fake for indefinido: swap -AR↔-ER/IR endings
+function buildFakePretForm(inf, subjKey, correctAnswer){
+  const stem = inf.slice(0, -2);
+  const isAR = inf.endsWith("ar");
+  const fakeMap = isAR ? {
+    yo: stem + "í", tu: stem + "iste", el: stem + "ió", nos: stem + "imos", ellos: stem + "ieron"
+  } : {
+    yo: stem + "é", tu: stem + "aste", el: stem + "ó", nos: stem + "amos", ellos: stem + "aron"
+  };
+  const fake = fakeMap[subjKey];
+  return (fake && fake !== correctAnswer) ? fake : null;
+}
+
+// Present-tense trap
 function buildPresentTrap(inf, subjKey){
   const stem = inf.slice(0, -2);
   const isAR = inf.endsWith("ar");
   const isER = inf.endsWith("er");
-  // Approximate regular present tense forms
   const presMap = isAR ? {
     yo: stem + "o", tu: stem + "as", el: stem + "a", nos: stem + "amos", ellos: stem + "an"
   } : isER ? {
@@ -723,99 +925,133 @@ function buildPresentTrap(inf, subjKey){
 /* ── Build a question ── */
 function makeQuestion(){
   const mode = $("mode").value;
-  const focus = $("focus").value;
-  let pool = [];
-  if (focus === "regular") pool = REGULAR_ITEMS;
-  else if (focus === "irregular") pool = IRREGULAR_ITEMS;
-  else pool = REGULAR_ITEMS.concat(IRREGULAR_ITEMS);
+  const tenseMode = $("tenseSelect").value;   // "imp" | "pret" | "both"
+  const focus = $("focus").value;              // "all" | "regular" | "irregular"
 
-  // Pick item + subject, avoiding recent combos
-  let item, subj, combo;
+  // 1. Decide which tense this question will test
+  let qTense;
+  if (tenseMode === "both") qTense = Math.random() < 0.5 ? "imp" : "pret";
+  else qTense = tenseMode;
+
+  // 2. Build verb pool filtered by regularity for the chosen tense
+  let pool = VERBS;
+  if (focus === "regular"){
+    pool = VERBS.filter(v => qTense === "imp" ? !v.irregImp : !v.irregPret);
+  } else if (focus === "irregular"){
+    pool = VERBS.filter(v => qTense === "imp" ? v.irregImp : v.irregPret);
+  }
+  if (pool.length === 0) pool = VERBS; // fallback
+
+  // 3. Pick verb + subject, avoiding recent combos
+  let verb, subj, combo;
   let attempts = 0;
   do {
-    item = pick(pool);
+    verb = pick(pool);
     subj = pick(SUBJECTS);
-    combo = item.inf + "|" + subj.key;
+    combo = verb.inf + "|" + subj.key + "|" + qTense;
     attempts++;
   } while (recentCombos.includes(combo) && attempts < 15);
   recentCombos.push(combo);
   if (recentCombos.length > HISTORY_SIZE) recentCombos.shift();
 
-  const ctx = pick(CONTEXTS);
+  // 4. Get the answer from the correct tense
+  const tenseData = qTense === "imp" ? verb.imp : verb.pret;
+  const answer = tenseData[subj.key];
 
-  // Pick a template matching context AND verb compatibility
+  // 5. Pick a template for this tense
   let templates = SENTENCE_TEMPLATES.filter(t =>
-    t.ctx === ctx.type && (!t.verbs || t.verbs.includes(item.inf))
+    t.tense === qTense && (!t.verbs || t.verbs.includes(verb.inf))
   );
   if (templates.length === 0){
-    templates = SENTENCE_TEMPLATES.filter(t => t.ctx === ctx.type && !t.verbs);
+    templates = SENTENCE_TEMPLATES.filter(t => t.tense === qTense && !t.verbs);
   }
   const tpl = pick(templates);
-  const answer = item[subj.key];
-  const qMode = (mode === "mixed") ? (Math.random() < 0.55 ? "mcq" : "fill") : mode;
 
+  const qMode = (mode === "mixed") ? (Math.random() < 0.55 ? "mcq" : "fill") : mode;
   const blank = "_____";
   const sentence = tpl.text.replace("{S}", subj.label).replace("{V}", blank);
-  const hint = ctx.hint + " " + tpl.extra.replace("{INF}", item.inf);
+  const ctxHint = CONTEXT_HINTS[tpl.ctx] || "";
+  const hint = ctxHint + " " + tpl.extra.replace("{INF}", verb.inf);
+  const tenseName = qTense === "imp" ? "Imperfecto" : "Indefinido";
 
   if (qMode === "mcq"){
     const distractors = new Set();
     const addDist = (val)=>{ if (val && val !== answer) distractors.add(val); };
 
-    // Strategy 1: NEIGHBOR PERSON — same verb, closest person (e.g. hablaba→hablabas)
-    // Pick the most confusing person first (yo↔él share forms, tú is +s)
+    // Strategy 1: NEIGHBOR PERSON — same verb, same tense, close person
     const neighborMap = {yo:"tu", tu:"yo", el:"yo", nos:"ellos", ellos:"nos"};
-    addDist(item[neighborMap[subj.key] || "tu"]);
-    // Also add another person of the same verb
-    addDist(item[pick(SUBJECTS.filter(s=>s.key!==subj.key && s.key!==neighborMap[subj.key])).key]);
+    addDist(tenseData[neighborMap[subj.key] || "tu"]);
+    addDist(tenseData[pick(SUBJECTS.filter(s=>s.key!==subj.key && s.key!==neighborMap[subj.key])).key]);
 
-    // Strategy 2: WRONG ENDING TYPE — if -ar verb, offer an -ía style fake; if -er/-ir, offer -aba style fake
-    const fakeEndings = buildFakeForm(item.inf, subj.key, answer);
-    if (fakeEndings) addDist(fakeEndings);
+    // Strategy 2: WRONG ENDING TYPE within same tense
+    const fakeEnding = qTense === "imp"
+      ? buildFakeImpForm(verb.inf, subj.key, answer)
+      : buildFakePretForm(verb.inf, subj.key, answer);
+    if (fakeEnding) addDist(fakeEnding);
 
-    // Strategy 3: PRESENT TENSE TRAP — offer what looks like present tense
-    const presentTrap = buildPresentTrap(item.inf, subj.key);
+    // Strategy 3: PRESENT TENSE TRAP
+    const presentTrap = buildPresentTrap(verb.inf, subj.key);
     if (presentTrap) addDist(presentTrap);
 
-    // Strategy 4: IRREGULAR CONFUSION — if regular, offer an irregular form for same person; vice versa
-    const isIrreg = IRREGULAR_ITEMS.some(x=>x.inf===item.inf);
-    const confusionPool = isIrreg ? REGULAR_ITEMS : IRREGULAR_ITEMS;
-    if (confusionPool.length > 0) addDist(pick(confusionPool)[subj.key]);
+    // Strategy 4: WRONG TENSE TRAP — same verb+person but other tense
+    const otherTenseData = qTense === "imp" ? verb.pret : verb.imp;
+    addDist(otherTenseData[subj.key]);
 
-    // Strategy 5: SAME conjugation group, same person (e.g. comía vs vivía vs escribía)
-    const sameGroupVerbs = pool.filter(x => x.inf !== item.inf && x[subj.key] !== answer);
-    if (sameGroupVerbs.length > 0) addDist(pick(sameGroupVerbs)[subj.key]);
+    // Strategy 5: IRREGULAR CONFUSION — irregular form from a different verb, same person
+    const isIrreg = qTense === "imp" ? verb.irregImp : verb.irregPret;
+    const confPool = VERBS.filter(v => v.inf !== verb.inf && (qTense === "imp" ? v.irregImp : v.irregPret));
+    if (confPool.length > 0){
+      const cv = pick(confPool);
+      addDist((qTense === "imp" ? cv.imp : cv.pret)[subj.key]);
+    }
 
-    // Fill remaining slots to ensure 3 unique distractors
+    // Strategy 6: SAME group, same person, same tense
+    const sameGroup = pool.filter(v => v.inf !== verb.inf);
+    if (sameGroup.length > 0){
+      const sv = pick(sameGroup);
+      addDist((qTense === "imp" ? sv.imp : sv.pret)[subj.key]);
+    }
+
+    // Fill remaining
     let safety = 0;
     while(distractors.size < 3 && safety < 30){
-      addDist(pick(pool)[pick(SUBJECTS).key]);
+      const rv = pick(VERBS);
+      const rs = pick(SUBJECTS);
+      addDist((qTense === "imp" ? rv.imp : rv.pret)[rs.key]);
       safety++;
     }
-    // Pick the 3 trickiest (prioritize what we added first)
     const distArr = Array.from(distractors).slice(0,3);
     const options = shuffle([answer, ...distArr]);
+
     return {
-      kind:"mcq", tag:`MCQ · ${ctx.type}`, sentence, hint,
-      answer, answerDisplay: answer, options,
-      explain: explainImperfect(item.inf, subj.label, answer),
+      kind:"mcq", tag:`MCQ · ${tenseName} · ${tpl.ctx}`, sentence, hint,
+      answer, answerDisplay: answer, options, qTense,
+      explain: explainAnswer(verb.inf, subj.label, answer, qTense, verb),
     };
   }
   return {
-    kind:"fill", tag:`FILL · ${ctx.type}`, sentence, hint,
-    answer, answerDisplay: answer, options: null,
-    explain: explainImperfect(item.inf, subj.label, answer),
+    kind:"fill", tag:`FILL · ${tenseName} · ${tpl.ctx}`, sentence, hint,
+    answer, answerDisplay: answer, options: null, qTense,
+    explain: explainAnswer(verb.inf, subj.label, answer, qTense, verb),
   };
 }
 
-function explainImperfect(inf, subjLabel, ans){
-  const isIrregular = (inf === "ser" || inf === "ir" || inf === "ver");
-  const endings = isIrregular
-    ? "Irregular imperfect: ser/ir/ver have unique forms."
-    : (inf.endsWith("ar")
-      ? "AR imperfect uses -aba endings."
-      : "ER/IR imperfect uses -ía endings.");
-  return `Correct form for <b>${subjLabel}</b> + <b>${inf}</b> in imperfect is <b>${ans}</b>. ${endings}`;
+function explainAnswer(inf, subjLabel, ans, qTense, verb){
+  const tenseName = qTense === "imp" ? "imperfecto" : "indefinido";
+  const isIrreg = qTense === "imp" ? verb.irregImp : verb.irregPret;
+  let rule;
+  if (isIrreg){
+    rule = `Irregular ${tenseName} — memorize this form!`;
+  } else if (qTense === "imp"){
+    rule = inf.endsWith("ar")
+      ? "AR imperfecto uses <b>-aba</b> endings."
+      : "ER/IR imperfecto uses <b>-ía</b> endings.";
+  } else {
+    rule = inf.endsWith("ar")
+      ? "AR indefinido uses <b>-é/-aste/-ó/-amos/-aron</b>."
+      : "ER/IR indefinido uses <b>-í/-iste/-ió/-imos/-ieron</b>.";
+  }
+  return `<b>${subjLabel}</b> + <b>${inf}</b> in ${tenseName} → <b>${ans}</b>. ${rule}`;
 }
 
 /* ── Rendering ── */
@@ -911,38 +1147,26 @@ function handleAnswer(raw){
     const ansStrip   = normalizeStripped(state.current.answer);
 
     if (userExact === ansExact){
-      award("correct");
-      playSound("correct");
+      award("correct"); playSound("correct");
       showFeedback("good", `Correct! ${state.current.explain}`);
       scheduleAutoAdvance();
     } else if (userStrip === ansStrip){
-      award("almost");
-      playSound("almost");
-      showFeedback("almost",
-        `Almost! Check your accents. The correct form is <b>${state.current.answerDisplay}</b>.<br>${state.current.explain}`
-      );
+      award("almost"); playSound("almost");
+      showFeedback("almost", `Almost! Check your accents. Correct: <b>${state.current.answerDisplay}</b>.<br>${state.current.explain}`);
     } else {
-      award("wrong");
-      playSound("wrong");
-      showFeedback("bad",
-        `Not quite. Correct answer: <b>${state.current.answerDisplay}</b><br>${state.current.explain}`
-      );
+      award("wrong"); playSound("wrong");
+      showFeedback("bad", `Not quite. Correct: <b>${state.current.answerDisplay}</b><br>${state.current.explain}`);
     }
   } else {
-    // MCQ — direct string comparison (no accent issue)
     const ok = (raw === state.current.answer);
     highlightMCQ(raw);
     if (ok){
-      award("correct");
-      playSound("correct");
+      award("correct"); playSound("correct");
       showFeedback("good", `Correct! ${state.current.explain}`);
       scheduleAutoAdvance();
     } else {
-      award("wrong");
-      playSound("wrong");
-      showFeedback("bad",
-        `Not quite. Correct answer: <b>${state.current.answerDisplay}</b><br>${state.current.explain}`
-      );
+      award("wrong"); playSound("wrong");
+      showFeedback("bad", `Not quite. Correct: <b>${state.current.answerDisplay}</b><br>${state.current.explain}`);
     }
   }
   syncButtons();
@@ -951,16 +1175,10 @@ function handleAnswer(raw){
 /* ── Auto-advance (timed mode only) ── */
 function scheduleAutoAdvance(){
   if (state.gameMode !== "timed") return;
-  state.autoAdvanceHandle = setTimeout(()=>{
-    state.autoAdvanceHandle = null;
-    next();
-  }, 1200);
+  state.autoAdvanceHandle = setTimeout(()=>{ state.autoAdvanceHandle = null; next(); }, 1200);
 }
 function clearAutoAdvance(){
-  if (state.autoAdvanceHandle){
-    clearTimeout(state.autoAdvanceHandle);
-    state.autoAdvanceHandle = null;
-  }
+  if (state.autoAdvanceHandle){ clearTimeout(state.autoAdvanceHandle); state.autoAdvanceHandle = null; }
 }
 
 function reveal(){
@@ -1001,10 +1219,7 @@ function startTimed(){
   state.timerHandle = setInterval(()=>{
     state.timeLeft -= 1;
     if (state.timeLeft <= 0){
-      state.timeLeft = 0;
-      setTimerText();
-      endTimed();
-      return;
+      state.timeLeft = 0; setTimerText(); endTimed(); return;
     }
     setTimerText();
   }, 1000);
@@ -1039,12 +1254,8 @@ function resetStats(){
   if (state.timerHandle) clearInterval(state.timerHandle);
   state.timerHandle = null;
   state.running = false;
-  state.score = 0;
-  state.streak = 0;
-  state.correct = 0;
-  state.wrong = 0;
-  state.current = null;
-  state.locked = false;
+  state.score = 0; state.streak = 0; state.correct = 0; state.wrong = 0;
+  state.current = null; state.locked = false;
   recentCombos.length = 0;
   updateStats();
 }
@@ -1072,10 +1283,12 @@ function syncButtons(){
   $("revealBtn").disabled = idle || !state.current || state.locked;
 }
 function syncSettings(){
+  const notIdle = state.gameMode !== "idle";
   const locked = state.gameMode === "timed";
   $("roundSeconds").disabled = locked;
-  $("mode").disabled = state.gameMode !== "idle";
-  $("focus").disabled = state.gameMode !== "idle";
+  $("mode").disabled = notIdle;
+  $("focus").disabled = notIdle;
+  $("tenseSelect").disabled = notIdle;
 }
 
 /* ── Event listeners ── */
@@ -1084,21 +1297,15 @@ $("practiceBtn").addEventListener("click", startPractice);
 $("nextBtn").addEventListener("click", next);
 $("revealBtn").addEventListener("click", reveal);
 $("resetBtn").addEventListener("click", resetAll);
-$("submitFill").addEventListener("click", ()=>{
-  handleAnswer($("fillInput").value);
-});
+$("submitFill").addEventListener("click", ()=>{ handleAnswer($("fillInput").value); });
 $("fillInput").addEventListener("keydown", (e)=>{
-  if (e.key === "Enter"){
-    e.preventDefault();
-    handleAnswer($("fillInput").value);
-  }
+  if (e.key === "Enter"){ e.preventDefault(); handleAnswer($("fillInput").value); }
 });
 
 // Keyboard shortcuts — skip when typing in an input
 document.addEventListener("keydown", (e)=>{
   const tag = document.activeElement && document.activeElement.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-
   if (e.key.toLowerCase() === "n"){ e.preventDefault(); next(); }
   if (["1","2","3","4"].includes(e.key)){
     const idx = parseInt(e.key,10)-1;
